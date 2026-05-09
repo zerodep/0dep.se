@@ -3,33 +3,44 @@ import assert from 'node:assert/strict';
 import { readFile, rm, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { JSDOM } from 'jsdom';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
 const distDir = join(repoRoot, 'dist');
 
-let html;
+let homeDoc;
+let aboutDoc;
+let homeHtmlRaw;
 let manifest;
-
-const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const escape = (s) => String(s).replace(/[&<>"']/g, (c) => escapeMap[c]);
+let profile;
 
 before(async () => {
   await rm(distDir, { recursive: true, force: true });
   const { build } = await import('../src/build.js');
   await build();
-  html = await readFile(join(distDir, 'index.html'), 'utf8');
+
+  homeHtmlRaw = await readFile(join(distDir, 'index.html'), 'utf8');
+  homeDoc = new JSDOM(homeHtmlRaw).window.document;
+  const aboutHtmlRaw = await readFile(join(distDir, 'about', 'index.html'), 'utf8');
+  aboutDoc = new JSDOM(aboutHtmlRaw).window.document;
+
   manifest = JSON.parse(await readFile(join(repoRoot, 'data', 'projects.json'), 'utf8'));
+  profile = JSON.parse(await readFile(join(repoRoot, 'data', 'profile.json'), 'utf8'));
 });
 
+// ---------- file artefacts ----------
+
 test('writes index.html', async () => {
-  const s = await stat(join(distDir, 'index.html'));
-  assert.ok(s.isFile());
+  assert.ok((await stat(join(distDir, 'index.html'))).isFile());
 });
 
 test('writes styles.css', async () => {
-  const s = await stat(join(distDir, 'styles.css'));
-  assert.ok(s.isFile());
+  assert.ok((await stat(join(distDir, 'styles.css'))).isFile());
+});
+
+test('writes about/index.html', async () => {
+  assert.ok((await stat(join(distDir, 'about', 'index.html'))).isFile());
 });
 
 test('writes CNAME with primary domain', async () => {
@@ -39,59 +50,180 @@ test('writes CNAME with primary domain', async () => {
 
 test('copies brand assets to dist', async () => {
   for (const f of ['logo.png', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png']) {
-    const s = await stat(join(distDir, f));
-    assert.ok(s.isFile(), `missing asset: ${f}`);
+    assert.ok((await stat(join(distDir, f))).isFile(), `missing asset: ${f}`);
   }
 });
 
-test('html references favicon and apple touch icon', () => {
-  assert.match(html, /<link[^>]+rel="icon"[^>]+favicon-32\.png/);
-  assert.match(html, /<link[^>]+rel="icon"[^>]+favicon-192\.png/);
-  assert.match(html, /<link[^>]+rel="apple-touch-icon"[^>]+apple-touch-icon\.png/);
+// ---------- home page ----------
+
+test('home: html starts with doctype', () => {
+  assert.match(homeHtmlRaw.slice(0, 20).toLowerCase(), /^<!doctype html>/);
 });
 
-test('html uses the logo image in the header', () => {
-  assert.match(html, /<img[^>]+src="logo\.png"[^>]+alt="zerodep"/);
+test('home: html element has lang', () => {
+  assert.ok(homeDoc.documentElement.getAttribute('lang'));
 });
 
-test('html links to the linkedin profile', () => {
-  assert.ok(html.includes(manifest.site.linkedin), 'manifest.site.linkedin must appear in html');
-  assert.match(html, /<a[^>]+href="https:\/\/www\.linkedin\.com\/in\/pal-edman"/);
+test('home: charset and viewport meta', () => {
+  assert.equal(homeDoc.querySelector('meta[charset]')?.getAttribute('charset'), 'utf-8');
+  assert.ok(homeDoc.querySelector('meta[name="viewport"]'));
 });
 
-test('html starts with doctype', () => {
-  assert.match(html.slice(0, 20).toLowerCase(), /^<!doctype html>/);
+test('home: title contains site title and tagline', () => {
+  assert.ok(homeDoc.title.includes(manifest.site.title));
+  assert.ok(homeDoc.title.includes(manifest.site.tagline));
 });
 
-test('html has lang and meta charset/viewport', () => {
-  assert.match(html, /<html[^>]+lang="/);
-  assert.match(html, /<meta[^>]+charset="utf-8"/i);
-  assert.match(html, /<meta[^>]+name="viewport"/i);
+test('home: header tagline and intro', () => {
+  assert.equal(
+    homeDoc.querySelector('.site-header .tagline').textContent,
+    manifest.site.tagline,
+  );
+  assert.equal(
+    homeDoc.querySelector('.site-header .intro').textContent,
+    manifest.site.intro,
+  );
 });
 
-test('html sets the site title and tagline', () => {
-  assert.ok(html.includes(escape(manifest.site.title)));
-  assert.ok(html.includes(escape(manifest.site.tagline)));
+test('home: logo image in header', () => {
+  const img = homeDoc.querySelector('.site-header h1 img');
+  assert.ok(img, 'logo <img> not found');
+  assert.equal(img.getAttribute('src'), '/logo.png');
+  assert.equal(img.getAttribute('alt'), manifest.site.title);
 });
 
-test('html mentions every project name and description', () => {
+test('home: favicon and apple-touch-icon links', () => {
+  const f32 = homeDoc.querySelector('link[rel="icon"][sizes="32x32"]');
+  const f192 = homeDoc.querySelector('link[rel="icon"][sizes="192x192"]');
+  const apple = homeDoc.querySelector('link[rel="apple-touch-icon"]');
+  assert.equal(f32?.getAttribute('href'), '/favicon-32.png');
+  assert.equal(f192?.getAttribute('href'), '/favicon-192.png');
+  assert.equal(apple?.getAttribute('href'), '/apple-touch-icon.png');
+});
+
+test('home: every group renders with title, description, and projects', () => {
   for (const group of manifest.groups) {
-    assert.ok(html.includes(escape(group.title)), `group title missing: ${group.title}`);
+    const section = homeDoc.querySelector(`section#${group.id}`);
+    assert.ok(section, `group section missing: ${group.id}`);
+    assert.equal(section.querySelector('.group-header h2').textContent, group.title);
+    assert.equal(section.querySelector('.group-header p').textContent, group.description);
+
     for (const p of group.projects) {
-      assert.ok(html.includes(escape(p.name)), `project name missing: ${p.name}`);
-      assert.ok(
-        html.includes(escape(p.description)),
-        `project description missing: ${p.slug}`,
+      const article = section.querySelector(`article#${p.slug}`);
+      assert.ok(article, `project article missing: ${p.slug}`);
+
+      const titleLink = article.querySelector('h3 a');
+      assert.equal(titleLink.textContent, p.name);
+      assert.equal(titleLink.getAttribute('href'), p.repo);
+
+      assert.equal(article.querySelector('p').textContent, p.description);
+
+      const tags = [...article.querySelectorAll('.tags li')].map((li) => li.textContent);
+      assert.deepEqual(tags, p.tags);
+
+      const linkHrefs = [...article.querySelectorAll('p.links a')].map((a) =>
+        a.getAttribute('href'),
       );
-      assert.ok(html.includes(p.repo), `repo link missing: ${p.slug}`);
+      assert.ok(linkHrefs.includes(p.repo), `${p.slug}: repo link missing in links row`);
+      if (p.npm) {
+        assert.ok(
+          linkHrefs.includes(`https://www.npmjs.com/package/${p.npm}`),
+          `${p.slug}: npm link missing`,
+        );
+      }
     }
   }
 });
 
-test('html has no unrendered template placeholders', () => {
-  assert.doesNotMatch(html, /\{\{[^}]+\}\}/, 'unrendered {{placeholder}} found');
+test('home: nav links to /about/', () => {
+  assert.ok(homeDoc.querySelector('nav a[href="/about/"]'), 'about link in nav not found');
 });
 
-test('html escapes user-controlled strings', () => {
-  assert.doesNotMatch(html, /<script(?![^>]*type="application\/ld\+json")[^>]*>/);
+test('home: footer links to LinkedIn, GitHub org, npm scope', () => {
+  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.linkedin}"]`));
+  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.githubOrg}"]`));
+  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.npmScope}"]`));
+});
+
+test('home: no inline script tags', () => {
+  assert.equal(homeDoc.querySelectorAll('script').length, 0);
+});
+
+test('home: no unrendered template placeholders', () => {
+  assert.doesNotMatch(homeHtmlRaw, /\{\{[^}]+\}\}/);
+});
+
+// ---------- about page ----------
+
+test('about: title contains the name', () => {
+  assert.ok(aboutDoc.title.includes(profile.name));
+});
+
+test('about: h1 is the name, tagline is the headline', () => {
+  assert.equal(aboutDoc.querySelector('h1').textContent, profile.name);
+  assert.equal(aboutDoc.querySelector('.tagline').textContent, profile.headline);
+});
+
+test('about: bio paragraphs match manifest order and content', () => {
+  const paragraphs = [...aboutDoc.querySelectorAll('main.profile .bio p')].map(
+    (p) => p.textContent,
+  );
+  assert.deepEqual(paragraphs, profile.bio);
+});
+
+test('about: highlights render as dt/dd pairs', () => {
+  const dts = [...aboutDoc.querySelectorAll('.highlights dt')].map((n) => n.textContent);
+  const dds = [...aboutDoc.querySelectorAll('.highlights dd')].map((n) => n.textContent);
+  assert.deepEqual(
+    dts,
+    profile.highlights.map((h) => h.label),
+  );
+  assert.deepEqual(
+    dds,
+    profile.highlights.map((h) => h.value),
+  );
+});
+
+test('about: profile links render with correct href and label', () => {
+  const links = [...aboutDoc.querySelectorAll('.profile-links a')];
+  for (const want of profile.links) {
+    const found = links.find((a) => a.getAttribute('href') === want.url);
+    assert.ok(found, `link missing: ${want.label}`);
+    assert.equal(found.textContent, want.label);
+  }
+});
+
+test('about: back link points to /', () => {
+  assert.equal(aboutDoc.querySelector('.back a')?.getAttribute('href'), '/');
+});
+
+test('about: shared assets use absolute paths', () => {
+  assert.equal(
+    aboutDoc.querySelector('link[rel="stylesheet"]')?.getAttribute('href'),
+    '/styles.css',
+  );
+  assert.equal(
+    aboutDoc.querySelector('link[rel="icon"][sizes="32x32"]')?.getAttribute('href'),
+    '/favicon-32.png',
+  );
+});
+
+// ---------- favicon byte-level checks ----------
+
+test('browser favicons have tRNS chunk (white keyed transparent)', async () => {
+  for (const f of ['favicon-32.png', 'favicon-192.png']) {
+    const buf = await readFile(join(distDir, f));
+    assert.ok(
+      buf.includes(Buffer.from('tRNS', 'ascii')),
+      `${f} should contain a tRNS chunk to make white transparent`,
+    );
+  }
+});
+
+test('apple-touch-icon keeps white background (no tRNS)', async () => {
+  const buf = await readFile(join(distDir, 'apple-touch-icon.png'));
+  assert.ok(
+    !buf.includes(Buffer.from('tRNS', 'ascii')),
+    'apple-touch-icon should not have tRNS — white bg is conventional on iOS',
+  );
 });

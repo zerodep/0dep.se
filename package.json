@@ -10,8 +10,11 @@
     "serve": "node src/serve.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "license": "MIT",
-  "author": "Pål Edman"
+  "author": "Pål Edman",
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
 }
