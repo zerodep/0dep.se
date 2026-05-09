@@ -132,6 +132,14 @@
           "repo": "https://github.com/onify/fake-amqplib",
           "npm": "@onify/fake-amqplib",
           "tags": ["testing", "amqp", "rabbitmq", "mock"]
+        },
+        {
+          "slug": "chronokinesis",
+          "name": "chronokinesis",
+          "description": "Time-travel for testing time-dependent code. Freeze, travel, and reset the clock — works with Date, hrtime, performance, and timezones.",
+          "repo": "https://github.com/paed01/chronokinesis",
+          "npm": "chronokinesis",
+          "tags": ["testing", "time", "mock", "timezone"]
         }
       ]
     }
