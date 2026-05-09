@@ -6,7 +6,7 @@
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
   "scripts": {
     "build": "node src/build.js",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "serve": "node src/serve.js"
   },
   "engines": {

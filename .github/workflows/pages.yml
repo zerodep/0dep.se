@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 22
       - name: Run tests
-        run: node --test test/
+        run: node --test test/*.test.js
       - name: Build site
         run: node src/build.js
       - uses: actions/configure-pages@v6
