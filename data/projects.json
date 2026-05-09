@@ -3,8 +3,8 @@
     "title": "zerodep",
     "tagline": "Small, dependency-free JavaScript packages.",
     "intro": "A collection of focused npm packages with zero (or near-zero) runtime dependencies, plus the BPMN engine ecosystem they grew up around. Open source, MIT, maintained by Pål Edman.",
-    "primaryDomain": "zerodep.se",
-    "altDomains": ["0dep.se"],
+    "primaryDomain": "0dep.se",
+    "altDomains": [],
     "githubOrg": "https://github.com/zerodep",
     "npmScope": "https://www.npmjs.com/~0dep"
   },
