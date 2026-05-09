@@ -54,6 +54,11 @@ test('html uses the logo image in the header', () => {
   assert.match(html, /<img[^>]+src="logo\.png"[^>]+alt="zerodep"/);
 });
 
+test('html links to the linkedin profile', () => {
+  assert.ok(html.includes(manifest.site.linkedin), 'manifest.site.linkedin must appear in html');
+  assert.match(html, /<a[^>]+href="https:\/\/www\.linkedin\.com\/in\/pal-edman"/);
+});
+
 test('html starts with doctype', () => {
   assert.match(html.slice(0, 20).toLowerCase(), /^<!doctype html>/);
 });

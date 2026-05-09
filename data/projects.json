@@ -6,7 +6,8 @@
     "primaryDomain": "0dep.se",
     "altDomains": [],
     "githubOrg": "https://github.com/zerodep",
-    "npmScope": "https://www.npmjs.com/~0dep"
+    "npmScope": "https://www.npmjs.com/~0dep",
+    "linkedin": "https://www.linkedin.com/in/pal-edman"
   },
   "groups": [
     {

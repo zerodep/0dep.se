@@ -81,6 +81,8 @@ ${groups.map(renderGroup).join('\n')}
       <a href="${escape(site.githubOrg)}" rel="noopener">github.com/zerodep</a>
       &middot;
       <a href="${escape(site.npmScope)}" rel="noopener">npm/~0dep</a>
+      &middot;
+      <a href="${escape(site.linkedin)}" rel="noopener">linkedin.com/in/pal-edman</a>
     </p>
     <p class="copy">&copy; Pål Edman &middot; MIT licensed</p>
   </footer>
