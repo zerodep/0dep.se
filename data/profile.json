@@ -1,6 +1,9 @@
 {
   "name": "Pål Edman",
   "headline": "Software engineer in Sweden building small, dependency-light JavaScript packages.",
+  "seoTitle": "Pål Edman — bpmn-engine maintainer, zerodep author",
+  "seoDescription": "Pål Edman — Sweden-based developer. Maintains bpmn-engine, the JavaScript BPMN 2.0 execution engine, and the zerodep collection of zero-dependency npm packages.",
+  "avatar": "/avatar.png",
   "bio": [
     "I write Node.js and JavaScript for a living and on the side. The stuff I publish under the zerodep org and the @0dep npm scope is the practical end of that — small modules with no runtime dependencies (or as close as I can get), each solving one problem reasonably well.",
     "My most-used open-source project is bpmn-engine, a BPMN 2.0 execution engine for Node and the browser. It's the foundation for a small ecosystem — bpmn-elements, smqp, moddle-context-serializer, bpmn-middleware — that lets you run business processes from BPMN XML without buying a workflow platform.",

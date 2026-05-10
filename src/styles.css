@@ -180,6 +180,16 @@ footer .copy { margin-top: 1rem; }
 /* About page */
 .profile-header { padding-top: 2.5rem; }
 .profile-header .back { margin: 0 0 1.5rem; font-size: 0.95rem; }
+.profile-header .avatar {
+  display: block;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 0 1rem;
+  box-shadow: var(--shadow);
+  border: 3px solid var(--card);
+}
 .profile-header h1 {
   font-size: clamp(2rem, 5vw, 2.75rem);
   margin: 0 0 0.5rem;

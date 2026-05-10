@@ -49,7 +49,8 @@ test('writes CNAME with primary domain', async () => {
 });
 
 test('copies brand assets to dist', async () => {
-  for (const f of ['logo.png', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png']) {
+  const avatar = profile.avatar.replace(/^\//, '');
+  for (const f of ['logo.png', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png', avatar]) {
     assert.ok((await stat(join(distDir, f))).isFile(), `missing asset: ${f}`);
   }
 });
@@ -69,9 +70,61 @@ test('home: charset and viewport meta', () => {
   assert.ok(homeDoc.querySelector('meta[name="viewport"]'));
 });
 
-test('home: title contains site title and tagline', () => {
+test('home: title contains site title and mentions bpmn', () => {
   assert.ok(homeDoc.title.includes(manifest.site.title));
-  assert.ok(homeDoc.title.includes(manifest.site.tagline));
+  assert.match(homeDoc.title.toLowerCase(), /bpmn/);
+});
+
+test('home: meta description mentions bpmn', () => {
+  const desc = homeDoc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+  assert.match(desc.toLowerCase(), /bpmn/);
+});
+
+test('home: keywords meta includes bpmn and zerodep', () => {
+  const k = homeDoc.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
+  assert.ok(k.toLowerCase().includes('bpmn'), 'keywords should include bpmn');
+  assert.ok(k.toLowerCase().includes('zerodep'), 'keywords should include zerodep');
+});
+
+test('home: canonical link is the apex URL', () => {
+  const href = homeDoc.querySelector('link[rel="canonical"]')?.getAttribute('href');
+  assert.equal(href, `https://${manifest.site.primaryDomain}/`);
+});
+
+test('home: open graph tags', () => {
+  for (const prop of ['og:title', 'og:description', 'og:url', 'og:image', 'og:type', 'og:site_name']) {
+    const el = homeDoc.querySelector(`meta[property="${prop}"]`);
+    assert.ok(el, `og tag missing: ${prop}`);
+    assert.ok(el.getAttribute('content'), `og tag empty: ${prop}`);
+  }
+  assert.equal(
+    homeDoc.querySelector('meta[property="og:type"]').getAttribute('content'),
+    'website',
+  );
+});
+
+test('home: twitter card uses summary_large_image', () => {
+  assert.equal(
+    homeDoc.querySelector('meta[name="twitter:card"]')?.getAttribute('content'),
+    'summary_large_image',
+  );
+});
+
+test('home: JSON-LD includes WebSite, Organization and ItemList', async () => {
+  const scripts = [...homeDoc.querySelectorAll('script[type="application/ld+json"]')];
+  assert.ok(scripts.length >= 1, 'no JSON-LD scripts');
+  const types = new Set();
+  for (const s of scripts) {
+    const data = JSON.parse(s.textContent);
+    const arr = Array.isArray(data) ? data : [data];
+    for (const item of arr) {
+      assert.equal(item['@context'], 'https://schema.org');
+      types.add(item['@type']);
+    }
+  }
+  for (const want of ['WebSite', 'Organization', 'ItemList']) {
+    assert.ok(types.has(want), `JSON-LD missing @type: ${want}`);
+  }
 });
 
 test('home: header tagline and intro', () => {
@@ -145,8 +198,11 @@ test('home: footer links to LinkedIn, GitHub org, npm scope', () => {
   assert.ok(homeDoc.querySelector(`a[href="${manifest.site.npmScope}"]`));
 });
 
-test('home: no inline script tags', () => {
-  assert.equal(homeDoc.querySelectorAll('script').length, 0);
+test('home: only JSON-LD script tags (no executable JS)', () => {
+  const nonLd = [...homeDoc.querySelectorAll('script')].filter(
+    (s) => s.getAttribute('type') !== 'application/ld+json',
+  );
+  assert.equal(nonLd.length, 0, 'unexpected executable <script> tag');
 });
 
 test('home: no unrendered template placeholders', () => {
@@ -162,6 +218,13 @@ test('about: title contains the name', () => {
 test('about: h1 is the name, tagline is the headline', () => {
   assert.equal(aboutDoc.querySelector('h1').textContent, profile.name);
   assert.equal(aboutDoc.querySelector('.tagline').textContent, profile.headline);
+});
+
+test('about: avatar image references profile.avatar with alt=name', () => {
+  const img = aboutDoc.querySelector('img.avatar');
+  assert.ok(img, 'avatar <img> not found');
+  assert.equal(img.getAttribute('src'), profile.avatar);
+  assert.equal(img.getAttribute('alt'), profile.name);
 });
 
 test('about: bio paragraphs match manifest order and content', () => {
@@ -206,6 +269,45 @@ test('about: shared assets use absolute paths', () => {
     aboutDoc.querySelector('link[rel="icon"][sizes="32x32"]')?.getAttribute('href'),
     '/favicon-32.png',
   );
+});
+
+test('about: canonical link is /about/', () => {
+  const href = aboutDoc.querySelector('link[rel="canonical"]')?.getAttribute('href');
+  assert.equal(href, `https://${manifest.site.primaryDomain}/about/`);
+});
+
+test('about: og:type is profile', () => {
+  assert.equal(
+    aboutDoc.querySelector('meta[property="og:type"]')?.getAttribute('content'),
+    'profile',
+  );
+});
+
+test('about: JSON-LD has Person with image', () => {
+  const scripts = [...aboutDoc.querySelectorAll('script[type="application/ld+json"]')];
+  let person;
+  for (const s of scripts) {
+    const data = JSON.parse(s.textContent);
+    const arr = Array.isArray(data) ? data : [data];
+    for (const item of arr) if (item['@type'] === 'Person') person = item;
+  }
+  assert.ok(person, 'about page JSON-LD should include Person');
+  assert.equal(person.image, `https://${manifest.site.primaryDomain}${profile.avatar}`);
+});
+
+// ---------- crawl files ----------
+
+test('writes robots.txt that allows all and points to sitemap', async () => {
+  const robots = await readFile(join(distDir, 'robots.txt'), 'utf8');
+  assert.match(robots, /User-agent:\s*\*/i);
+  assert.match(robots, /Allow:\s*\//);
+  assert.match(robots, new RegExp(`Sitemap:\\s*https://${manifest.site.primaryDomain}/sitemap\\.xml`));
+});
+
+test('writes sitemap.xml listing home and about', async () => {
+  const sitemap = await readFile(join(distDir, 'sitemap.xml'), 'utf8');
+  assert.ok(sitemap.includes(`<loc>https://${manifest.site.primaryDomain}/</loc>`));
+  assert.ok(sitemap.includes(`<loc>https://${manifest.site.primaryDomain}/about/</loc>`));
 });
 
 // ---------- favicon byte-level checks ----------
