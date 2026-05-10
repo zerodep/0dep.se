@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, rm, stat } from 'node:fs/promises';
+import { readFile, readdir, rm, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { JSDOM } from 'jsdom';
@@ -308,6 +308,22 @@ test('writes sitemap.xml listing home and about', async () => {
   const sitemap = await readFile(join(distDir, 'sitemap.xml'), 'utf8');
   assert.ok(sitemap.includes(`<loc>https://${manifest.site.primaryDomain}/</loc>`));
   assert.ok(sitemap.includes(`<loc>https://${manifest.site.primaryDomain}/about/</loc>`));
+});
+
+test('static/ files are copied verbatim to dist', async () => {
+  const staticDir = join(repoRoot, 'static');
+  let files;
+  try {
+    files = await readdir(staticDir);
+  } catch {
+    return; // static/ optional — only run when it exists
+  }
+  for (const f of files) {
+    if (f === '.DS_Store') continue;
+    const dst = await readFile(join(distDir, f));
+    const src = await readFile(join(staticDir, f));
+    assert.ok(dst.equals(src), `static/${f} not copied to dist verbatim`);
+  }
 });
 
 // ---------- favicon byte-level checks ----------

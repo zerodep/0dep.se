@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -48,6 +48,7 @@ const projectsPath = join(root, 'data', 'projects.json');
 const profilePath = join(root, 'data', 'profile.json');
 const stylesSrc = join(root, 'src', 'styles.css');
 const assetsDir = join(root, 'src', 'assets');
+const staticDir = join(root, 'static');
 const distDir = join(root, 'dist');
 
 const copyAssets = ['logo.png', 'apple-touch-icon.png'];
@@ -336,6 +337,17 @@ export async function build() {
   await writeFile(join(distDir, 'CNAME'), manifest.site.primaryDomain + '\n');
   await writeFile(join(distDir, 'robots.txt'), robotsTxt(manifest.site));
   await writeFile(join(distDir, 'sitemap.xml'), sitemapXml(manifest.site));
+
+  // Mirror static/ verbatim — site-verification HTML files, well-known endpoints, etc.
+  let staticFiles = [];
+  try {
+    staticFiles = await readdir(staticDir);
+  } catch { /* static/ optional */ }
+  for (const f of staticFiles) {
+    if (f === '.DS_Store') continue;
+    await copyFile(join(staticDir, f), join(distDir, f));
+  }
+
   return { distDir };
 }
 
