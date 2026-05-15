@@ -43,6 +43,18 @@ test('writes about/index.html', async () => {
   assert.ok((await stat(join(distDir, 'about', 'index.html'))).isFile());
 });
 
+test('writes 404.html with noindex and back-to-home link', async () => {
+  const raw = await readFile(join(distDir, '404.html'), 'utf8');
+  const doc = new JSDOM(raw).window.document;
+  assert.equal(
+    doc.querySelector('meta[name="robots"]')?.getAttribute('content'),
+    'noindex',
+    '404 page should be noindex',
+  );
+  assert.ok(doc.querySelector('a[href="/"]'), 'should link back to home');
+  assert.match(doc.querySelector('h1')?.textContent ?? '', /404/);
+});
+
 test('writes CNAME with primary domain', async () => {
   const cname = (await readFile(join(distDir, 'CNAME'), 'utf8')).trim();
   assert.equal(cname, manifest.site.primaryDomain);

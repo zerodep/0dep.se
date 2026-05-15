@@ -284,6 +284,32 @@ ${ldBlocks}
 `;
 }
 
+function render404(site) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Page not found">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
+  <title>Page not found — ${escape(site.title)}</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header notfound">
+    <h1>404</h1>
+    <p class="tagline">That page doesn&rsquo;t exist.</p>
+    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+  </header>
+</body>
+</html>
+`;
+}
+
 function robotsTxt(site) {
   return `User-agent: *
 Allow: /
@@ -322,6 +348,7 @@ export async function build() {
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
+  await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
     await copyFile(join(assetsDir, f), join(distDir, f));
