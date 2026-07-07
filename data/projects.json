@@ -99,6 +99,14 @@
           "tags": ["bpmn", "serializer", "moddle"]
         },
         {
+          "slug": "bpmn-extensions",
+          "name": "@0dep/bpmn-extensions",
+          "description": "Flow extensions for bpmn-elements: FEEL expressions and the Zeebe-namespace BPMN extension elements for Camunda 8 style workflows.",
+          "repo": "https://github.com/zerodep/bpmn-extensions",
+          "npm": "@0dep/bpmn-extensions",
+          "tags": ["bpmn", "feel", "zeebe", "extensions"]
+        },
+        {
           "slug": "onify-flow-extensions",
           "name": "@onify/flow-extensions",
           "description": "Onify Flow extensions for bpmn-engine. Adds the service tasks, listeners, and Camunda-style behaviours used by the Onify automation platform.",

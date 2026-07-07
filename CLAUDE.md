@@ -9,8 +9,8 @@ Source for the static landing page hosted at **0dep.se**. Catalogues the zerodep
 ## Conventions
 
 - **Node 26.** Pinned in `.nvmrc` (read by fnm/nvm) and consumed by `actions/setup-node` via `node-version-file`. Bump in one place when upgrading.
-- **TDD.** Write a failing test before the implementation. Use `node:test` (`npm test` runs `node --test test/*.test.js`) plus `jsdom` for DOM-based assertions.
-- **Zero runtime dependencies.** Node built-ins only at runtime. Dev tooling can pull in npm packages (jsdom for DOM testing); the Pages workflow runs `npm ci` before tests so `node_modules/` exists in CI.
+- **TDD.** Write a failing test before the implementation. Use `node:test` (`npm test` runs `node --test test/*.test.js`) plus `happy-dom` for DOM-based assertions.
+- **Zero runtime dependencies.** Node built-ins only at runtime. Dev tooling can pull in npm packages (happy-dom for DOM testing); the Pages workflow runs `npm ci` before tests so `node_modules/` exists in CI.
 - **No frameworks, no bundler.** Plain HTML and CSS. The renderer in `src/build.js` is pure string concatenation with explicit HTML escaping.
 - **Single source of truth.** Project list lives in `data/projects.json`. Add or remove packages there; tests and the build script consume it.
 

@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, rm, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { JSDOM } from 'jsdom';
+import { Window } from 'happy-dom';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
 const distDir = join(repoRoot, 'dist');
+
+const parseHtml = (html) => {
+  const { DOMParser } = new Window();
+  return new DOMParser().parseFromString(html, 'text/html');
+};
 
 let homeDoc;
 let aboutDoc;
@@ -21,9 +26,9 @@ before(async () => {
   await build();
 
   homeHtmlRaw = await readFile(join(distDir, 'index.html'), 'utf8');
-  homeDoc = new JSDOM(homeHtmlRaw).window.document;
+  homeDoc = parseHtml(homeHtmlRaw);
   const aboutHtmlRaw = await readFile(join(distDir, 'about', 'index.html'), 'utf8');
-  aboutDoc = new JSDOM(aboutHtmlRaw).window.document;
+  aboutDoc = parseHtml(aboutHtmlRaw);
 
   manifest = JSON.parse(await readFile(join(repoRoot, 'data', 'projects.json'), 'utf8'));
   profile = JSON.parse(await readFile(join(repoRoot, 'data', 'profile.json'), 'utf8'));
@@ -45,7 +50,7 @@ test('writes about/index.html', async () => {
 
 test('writes 404.html with noindex and back-to-home link', async () => {
   const raw = await readFile(join(distDir, '404.html'), 'utf8');
-  const doc = new JSDOM(raw).window.document;
+  const doc = parseHtml(raw);
   assert.equal(
     doc.querySelector('meta[name="robots"]')?.getAttribute('content'),
     'noindex',

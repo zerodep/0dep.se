@@ -15,6 +15,6 @@
   "license": "MIT",
   "author": "Pål Edman",
   "devDependencies": {
-    "jsdom": "^26.1.0"
+    "happy-dom": "^20.10.6"
   }
 }

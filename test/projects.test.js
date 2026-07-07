@@ -70,6 +70,7 @@ test('expected zerodep packages are present', () => {
     'ocrgenerator',
     'texample',
     'bpmn-engine',
+    'bpmn-extensions',
   ]) {
     assert.ok(allSlugs.has(expected), `expected project missing: ${expected}`);
   }
