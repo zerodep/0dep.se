@@ -97,10 +97,17 @@ test('home: meta description mentions bpmn', () => {
   assert.match(desc.toLowerCase(), /bpmn/);
 });
 
-test('home: keywords meta includes bpmn and zerodep', () => {
+test('home: keywords meta includes bpmn, dmn, and zerodep', () => {
   const k = homeDoc.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
   assert.ok(k.toLowerCase().includes('bpmn'), 'keywords should include bpmn');
+  assert.ok(k.toLowerCase().includes('dmn'), 'keywords should include dmn');
+  assert.ok(k.toLowerCase().includes('decision table'), 'keywords should include decision table');
   assert.ok(k.toLowerCase().includes('zerodep'), 'keywords should include zerodep');
+});
+
+test('home: meta description mentions dmn decisions', () => {
+  const desc = homeDoc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+  assert.match(desc.toLowerCase(), /dmn/);
 });
 
 test('home: canonical link is the apex URL', () => {

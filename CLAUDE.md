@@ -36,5 +36,5 @@ dist/                build output (gitignored)
 ## Project list scope
 
 - **zerodep packages** (under `github.com/zerodep`): `@0dep/piso`, `@0dep/pino-applicationinsights`, `ocrgenerator`, `texample`.
-- **BPMN engine ecosystem**: `bpmn-engine`, `bpmn-middleware`, `bpmn-elements`, `smqp`, `moddle-context-serializer` (under `github.com/paed01` and `github.com/zerodep` — same maintainer; locations match each package's published `repository` field), plus `@onify/flow-extensions` (under `github.com/onify`, third-party extension pack).
+- **BPMN engine ecosystem**: `bpmn-engine`, `bpmn-middleware`, `bpmn-elements`, `dmn-elements`, `smqp`, `moddle-context-serializer` (under `github.com/paed01` and `github.com/zerodep` — same maintainer; locations match each package's published `repository` field), plus `@onify/flow-extensions` (under `github.com/onify`, third-party extension pack).
 - **Excluded:** `feelin` (owned by Camunda / nikku, not Pål's), `www` (the legacy Express site for zerodep), and any `private: true` workspace package (`dtstest`, `feel-extensions`, `piso-benchmark`, `import-test`, `expression`).

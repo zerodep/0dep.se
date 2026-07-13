@@ -71,7 +71,16 @@ test('expected zerodep packages are present', () => {
     'texample',
     'bpmn-engine',
     'bpmn-extensions',
+    'dmn-elements',
   ]) {
     assert.ok(allSlugs.has(expected), `expected project missing: ${expected}`);
   }
+});
+
+test('dmn-elements is listed in the bpmn-engine group', () => {
+  const group = manifest.groups.find((g) => g.id === 'bpmn-engine');
+  const project = group.projects.find((p) => p.slug === 'dmn-elements');
+  assert.ok(project, 'dmn-elements missing from bpmn-engine group');
+  assert.equal(project.npm, 'dmn-elements');
+  assert.equal(project.repo, 'https://github.com/zerodep/dmn-elements');
 });
