@@ -212,6 +212,13 @@ test('home: every group renders with title, description, and projects', () => {
   }
 });
 
+test('home: bpmn-engine group references the run page', () => {
+  const section = homeDoc.querySelector('section#bpmn-engine');
+  const link = section.querySelector('.group-header a[href="/run/"]');
+  assert.ok(link, 'bpmn-engine group header should link to /run/');
+  assert.ok(link.textContent.trim().length >= 10, 'link should carry a call to action');
+});
+
 test('home: nav links to /about/', () => {
   assert.ok(homeDoc.querySelector('nav a[href="/about/"]'), 'about link in nav not found');
 });

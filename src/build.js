@@ -190,10 +190,13 @@ function renderProject(p) {
 }
 
 function renderGroup(g) {
+  const groupLink = g.link
+    ? `\n        <p class="group-link"><a href="${escape(g.link.href)}">${escape(g.link.label)}</a></p>`
+    : '';
   return `    <section class="group" id="${escape(g.id)}">
       <header class="group-header">
         <h2>${escape(g.title)}</h2>
-        <p>${escape(g.description)}</p>
+        <p>${escape(g.description)}</p>${groupLink}
       </header>
       <div class="projects">
 ${g.projects.map(renderProject).join('\n')}

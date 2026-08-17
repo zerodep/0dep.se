@@ -57,6 +57,7 @@
       "id": "bpmn-engine",
       "title": "BPMN engine ecosystem",
       "description": "The BPMN 2.0 engine and its building blocks. Used together to execute, extend, and serialize workflow processes in JavaScript and TypeScript.",
+      "link": { "href": "/run/", "label": "Try it live — paste a BPMN diagram and run it in the browser" },
       "projects": [
         {
           "slug": "bpmn-engine",
