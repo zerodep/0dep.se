@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+    xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+    id="DiscountDefinitions" name="Discounts" namespace="https://example.com/dmn/discount">
+  <decision id="discount" name="Discount">
+    <variable id="discountVariable" name="discount" typeRef="number" />
+    <decisionTable id="discountTable" hitPolicy="UNIQUE">
+      <input id="totalInput" label="Order total">
+        <inputExpression id="totalInputExpression" typeRef="number"><text>total</text></inputExpression>
+      </input>
+      <output id="discountOutput" name="discount" typeRef="number" />
+      <rule id="bigSpenderRule">
+        <inputEntry id="bigSpenderEntry"><text>&gt;= 100</text></inputEntry>
+        <outputEntry id="bigSpenderDiscount"><text>0.1</text></outputEntry>
+      </rule>
+      <rule id="regularRule">
+        <inputEntry id="regularEntry"><text>&lt; 100</text></inputEntry>
+        <outputEntry id="regularDiscount"><text>0</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DiscountDiagram">
+      <dmndi:DMNShape id="discount_di" dmnElementRef="discount">
+        <dc:Bounds x="160" y="80" width="180" height="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

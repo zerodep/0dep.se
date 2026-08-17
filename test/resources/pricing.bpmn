@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    id="PricingDefinitions" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="pricing" name="Pricing" isExecutable="true">
+    <startEvent id="start" name="Order received" />
+    <sequenceFlow id="to-price" sourceRef="start" targetRef="price" />
+    <businessRuleTask id="price" name="Decide discount">
+      <extensionElements>
+        <zeebe:calledDecision decisionId="discount" resultVariable="discount" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= order.total" target="total" />
+          <zeebe:output source="= discount" target="rebate" />
+        </zeebe:ioMapping>
+      </extensionElements>
+    </businessRuleTask>
+    <sequenceFlow id="to-end" sourceRef="price" targetRef="end" />
+    <endEvent id="end" name="Priced" />
+  </process>
+  <bpmndi:BPMNDiagram id="PricingDiagram">
+    <bpmndi:BPMNPlane id="PricingPlane" bpmnElement="pricing">
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="price_di" bpmnElement="price">
+        <dc:Bounds x="250" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
+        <dc:Bounds x="412" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="to-price_di" bpmnElement="to-price">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="250" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="to-end_di" bpmnElement="to-end">
+        <di:waypoint x="350" y="120" />
+        <di:waypoint x="412" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

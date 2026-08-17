@@ -1,6 +1,7 @@
 import { readFile, readdir, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { build as bundleJs } from 'esbuild';
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -65,13 +66,15 @@ function head({
   keywords = '',
   ogType = 'website',
   ogImage = '/logo.png',
+  csp = '',
 }) {
   const baseUrl = `https://${site.primaryDomain}`;
   const url = `${baseUrl}${path}`;
   const imageAbs = ogImage.startsWith('http') ? ogImage : `${baseUrl}${ogImage}`;
   const keywordsTag = keywords ? `\n  <meta name="keywords" content="${escape(keywords)}">` : '';
+  const cspTag = csp ? `\n  <meta http-equiv="Content-Security-Policy" content="${escape(csp)}">` : '';
   return `  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">${cspTag}
   <meta name="description" content="${escape(description)}">${keywordsTag}
   <meta name="color-scheme" content="light dark">
   <link rel="canonical" href="${escape(url)}">
@@ -203,7 +206,7 @@ function renderHome(manifest) {
   const groupNav = groups
     .map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`)
     .join(' &middot; ');
-  const navLinks = `${groupNav} &middot; <a href="/about/">About</a>`;
+  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
 
   return `<!doctype html>
@@ -284,6 +287,88 @@ ${ldBlocks}
 `;
 }
 
+function renderRun(site) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+${head({
+    site,
+    title: `Run a BPMN diagram — ${site.title}`,
+    description:
+      'Paste or drop a BPMN 2.0 diagram and execute it in the browser — bpmn-elements with FEEL expressions and zeebe extension elements via @0dep/bpmn-extensions, rendered with bpmn-js.',
+    path: '/run/',
+    // everything is self-hosted; unsafe-inline styles for bpmn-js inline style attributes
+    csp: "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'",
+  })}
+  <link rel="stylesheet" href="/run/diagram-js.css">
+  <link rel="stylesheet" href="/run/bpmn-js.css">
+</head>
+<body>
+  <header class="site-header run-header">
+    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    <h1>Run a BPMN diagram</h1>
+    <p class="tagline">Paste or drop BPMN 2.0 XML and execute it right here in the browser &mdash; <a href="https://github.com/paed01/bpmn-elements" rel="noopener">bpmn-elements</a> wired with <a href="https://github.com/zerodep/bpmn-extensions" rel="noopener">@0dep/bpmn-extensions</a>, drawn with <a href="https://github.com/bpmn-io/bpmn-js" rel="noopener">bpmn-js</a>.</p>
+  </header>
+  <main class="run">
+    <section class="run-canvas" aria-label="Diagram">
+      <div class="run-toolbar">
+        <p class="run-actions">
+          <button id="run" type="button">Run</button>
+          <button id="step" type="button" disabled>Step</button>
+          <button id="example" type="button" class="secondary">Load example</button>
+        </p>
+        <p class="run-options">
+          <label><input type="checkbox" id="step-mode"> Step through the run</label>
+          <label><input type="checkbox" id="bypass"> Run through manual and user tasks</label>
+          <label>Loop guard
+            <select id="max-touches">
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+            touches</label>
+        </p>
+      </div>
+      <div id="canvas"></div>
+      <p id="canvas-note" class="hint">Load a diagram with BPMN DI to see it here. Running elements light up, and clicking an element shows its properties.</p>
+      <div id="properties" hidden>
+        <h3 id="properties-title"></h3>
+        <p id="properties-taken"></p>
+        <pre id="properties-body"></pre>
+      </div>
+      <details class="run-log" id="log-details">
+        <summary>Execution log</summary>
+        <ul id="log"></ul>
+        <pre id="output"></pre>
+        <p id="stats-total" hidden></p>
+        <table id="stats" hidden>
+          <thead>
+            <tr><th>Activity</th><th>Type</th><th>Runs</th><th>Total ms</th></tr>
+          </thead>
+          <tbody id="stats-body"></tbody>
+        </table>
+      </details>
+    </section>
+    <section class="run-dmn" data-dmn-dropzone aria-label="Decisions">
+      <h2>Decisions</h2>
+      <ul id="dmn-list"></ul>
+      <p class="hint">Drop <code>.dmn</code> files here &mdash; business rule tasks call their decisions by decision id (<code>zeebe:calledDecision</code>), executed with <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>.</p>
+    </section>
+    <section class="run-input" data-dropzone>
+      <label for="source">BPMN 2.0 XML &mdash; paste it, or drop a <code>.bpmn</code> file on this panel</label>
+      <textarea id="source" spellcheck="false" placeholder="&lt;definitions xmlns=&quot;http://www.omg.org/spec/BPMN/20100524/MODEL&quot; ...&gt;"></textarea>
+      <label for="variables">Initial environment variables (JSON)</label>
+      <textarea id="variables" class="variables" spellcheck="false" placeholder='{ "order": { "total": 199 } }'></textarea>
+      <p class="hint">FEEL expressions plus zeebe and camunda 7 extension elements are supported. Unregistered service task types and foreign script formats run through, and waiting manual and user tasks get a Signal button in the log unless bypassed. The helpers <code>takeOnce</code> and <code>takeTwice</code> make circular flows terminate: use <code>= takeOnce()</code> in a loop-back condition, or <code>takeTwice</code> as a service task type and <code>= taken</code> on the flow.</p>
+    </section>
+  </main>
+${footer(site)}
+  <script type="module" src="/run/app.js"></script>
+</body>
+</html>
+`;
+}
+
 function render404(site) {
   return `<!doctype html>
 <html lang="en">
@@ -330,6 +415,12 @@ function sitemapXml(site) {
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>${base}/run/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>${base}/about/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -345,9 +436,29 @@ export async function build() {
 
   await mkdir(distDir, { recursive: true });
   await mkdir(join(distDir, 'about'), { recursive: true });
+  await mkdir(join(distDir, 'run'), { recursive: true });
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
+  await writeFile(join(distDir, 'run', 'index.html'), renderRun(manifest.site));
+  await bundleJs({
+    entryPoints: [join(root, 'src', 'runner', 'app.js')],
+    outdir: join(distDir, 'run'),
+    bundle: true,
+    splitting: true,
+    chunkNames: 'chunks/[name]-[hash]',
+    format: 'esm',
+    platform: 'browser',
+    minify: true,
+    logLevel: 'silent',
+  });
+  for (const f of ['diagram-js.css', 'bpmn-js.css']) {
+    await copyFile(join(root, 'node_modules', 'bpmn-js', 'dist', 'assets', f), join(distDir, 'run', f));
+  }
+  // example diagrams for the Load example button — single source of truth in test/resources
+  for (const f of ['pricing.bpmn', 'discount.dmn']) {
+    await copyFile(join(root, 'test', 'resources', f), join(distDir, 'run', f));
+  }
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
