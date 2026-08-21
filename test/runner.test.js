@@ -165,6 +165,88 @@ test('zeebe FEEL script tasks still evaluate through the pass-through registry',
   assert.deepEqual(output, { total: 2 });
 });
 
+test('wait and timer entries carry what api messages the element accepts', async () => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_accepts" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="approve" />
+    <userTask id="approve" />
+    <boundaryEvent id="onerr" attachedToRef="approve"><errorEventDefinition /></boundaryEvent>
+    <sequenceFlow id="f2" sourceRef="approve" targetRef="end" />
+    <endEvent id="end" />
+    <sequenceFlow id="f3" sourceRef="onerr" targetRef="failed" />
+    <endEvent id="failed" />
+  </process>
+</definitions>`;
+
+  const waits = {};
+  await runBpmn(source, {
+    onEvent(e) {
+      if (e.event === 'activity.wait') {
+        waits[e.id] = e.accepts;
+        if (e.id === 'approve') setTimeout(() => e.api.signal(), 5);
+      }
+    },
+  });
+
+  assert.ok(waits.approve?.includes('signal'), `user task wait should accept signal, got ${waits.approve}`);
+  assert.ok(waits.onerr && !waits.onerr.includes('signal'), `error boundary wait should not accept signal, got ${waits.onerr}`);
+
+  const timed = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_taccepts" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="pause" />
+    <intermediateCatchEvent id="pause">
+      <timerEventDefinition>
+        <timeDuration xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT0.02S</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="f2" sourceRef="pause" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+  const { events } = await runBpmn(timed);
+  const timer = events.find((e) => e.event === 'activity.timer');
+  assert.ok(timer.accepts?.includes('cancel'), `timer should accept cancel, got ${timer.accepts}`);
+});
+
+test('a stuck conditional event can be cancelled — needs bpmn-elements >= 18.0.20', async () => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_cond" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="cond" />
+    <intermediateCatchEvent id="cond">
+      <conditionalEventDefinition>
+        <condition xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= ready = true</condition>
+      </conditionalEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="f2" sourceRef="cond" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  let accepts;
+  const { events } = await runBpmn(source, {
+    variables: { ready: false },
+    onEvent(e) {
+      if (e.event === 'activity.wait' && e.id === 'cond') {
+        accepts = e.accepts;
+        setTimeout(() => e.api.cancel(), 5);
+      }
+    },
+  });
+
+  assert.ok(accepts?.includes('cancel'), `conditional wait should accept cancel, got ${accepts}`);
+  assert.ok(
+    events.some((e) => e.event === 'activity.end' && e.id === 'cond'),
+    'cancelled conditional event should complete, not discard',
+  );
+  assert.equal(events.at(-1).event, 'definition.leave');
+});
+
 test('manual tasks wait for a signal, like user tasks', async () => {
   const waited = [];
   await runBpmn(MANUAL_TASK_SOURCE, {
@@ -292,6 +374,197 @@ test('stops circular runs when an activity is touched more than 10 times', async
     assert.match(err.message, /<a>|<b>/, 'error should name the looping activity');
     return true;
   });
+});
+
+test('step mode advances into sub-processes', async () => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_sub" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="outer" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="to-sub" sourceRef="start" targetRef="sub" />
+    <subProcess id="sub">
+      <startEvent id="inner-start" />
+      <sequenceFlow id="to-inner-task" sourceRef="inner-start" targetRef="inner-task" />
+      <task id="inner-task" />
+      <sequenceFlow id="to-inner-end" sourceRef="inner-task" targetRef="inner-end" />
+      <endEvent id="inner-end" />
+    </subProcess>
+    <sequenceFlow id="to-end" sourceRef="sub" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  const definition = await createDefinition(source, { step: true });
+
+  let finished = false;
+  const done = runDefinition(definition).then((result) => {
+    finished = true;
+    return result;
+  });
+
+  await Promise.resolve();
+  let guard = 300;
+  while (!finished && guard--) {
+    stepDefinition(definition);
+    await Promise.resolve();
+  }
+
+  const { events } = await done;
+  assert.equal(finished, true, 'stepping should complete a run with a sub-process');
+  assert.ok(
+    events.some((e) => e.event === 'activity.end' && e.id === 'inner-task'),
+    'inner task should have been stepped to completion',
+  );
+  assert.equal(events.at(-1).event, 'definition.leave');
+});
+
+test('step mode completes a loop inside a sub-process', async () => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_subloop" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="outer" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="to-sub" sourceRef="start" targetRef="sub" />
+    <subProcess id="sub">
+      <startEvent id="inner-start" />
+      <sequenceFlow id="to-inner-task" sourceRef="inner-start" targetRef="inner-task" />
+      <task id="inner-task" />
+      <sequenceFlow id="to-inner-gw" sourceRef="inner-task" targetRef="inner-gw" />
+      <exclusiveGateway id="inner-gw" default="to-inner-end" />
+      <sequenceFlow id="inner-back" sourceRef="inner-gw" targetRef="inner-task">
+        <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= takeOnce()</conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="to-inner-end" sourceRef="inner-gw" targetRef="inner-end" />
+      <endEvent id="inner-end" />
+    </subProcess>
+    <sequenceFlow id="to-end" sourceRef="sub" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  const definition = await createDefinition(source, { step: true });
+
+  let finished = false;
+  const done = runDefinition(definition).then((result) => {
+    finished = true;
+    return result;
+  });
+
+  await Promise.resolve();
+  let guard = 500;
+  while (!finished && guard--) {
+    stepDefinition(definition);
+    await Promise.resolve();
+  }
+
+  const { events } = await done;
+  assert.equal(finished, true, 'stepping should complete an inner loop');
+  assert.equal(
+    events.filter((e) => e.event === 'activity.enter' && e.id === 'inner-task').length,
+    2,
+    'inner task should have looped once',
+  );
+  assert.equal(events.at(-1).event, 'definition.leave');
+});
+
+test('step mode completes a transaction with an armed compensation boundary', async () => {
+  // the compensation boundary is discarded when the transaction completes
+  // normally — its trailing run messages are invisible to getPostponed
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_transcomp" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="trans" />
+    <transaction id="trans">
+      <startEvent id="ts" />
+      <sequenceFlow id="tf1" sourceRef="ts" targetRef="work" />
+      <task id="work" />
+      <boundaryEvent id="on-comp" attachedToRef="work"><compensateEventDefinition /></boundaryEvent>
+      <task id="undo" isForCompensation="true" />
+      <association id="a1" associationDirection="One" sourceRef="on-comp" targetRef="undo" />
+      <sequenceFlow id="tf2" sourceRef="work" targetRef="tend" />
+      <endEvent id="tend" />
+    </transaction>
+    <sequenceFlow id="f2" sourceRef="trans" targetRef="booked" />
+    <endEvent id="booked" />
+  </process>
+</definitions>`;
+
+  const definition = await createDefinition(source, { step: true });
+
+  let finished = false;
+  const done = runDefinition(definition).then((result) => {
+    finished = true;
+    return result;
+  });
+
+  await Promise.resolve();
+  let guard = 400;
+  while (!finished && guard--) {
+    stepDefinition(definition);
+    await Promise.resolve();
+  }
+
+  const completed = finished;
+  if (!completed) definition.stop(); // do not hang the suite on the upstream stall
+  const { events } = await done;
+  assert.equal(completed, true, 'stepping should complete past the discarded compensation boundary');
+  assert.ok(events.some((e) => e.event === 'activity.end' && e.id === 'booked'));
+});
+
+test('step mode runs a transaction to the end event after a cancel run', async () => {
+  // cancel on the first pass, retry via the boundary, complete to booked
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_trans" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="booking" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="trans" />
+    <transaction id="trans">
+      <startEvent id="ts" />
+      <sequenceFlow id="tf1" sourceRef="ts" targetRef="book" />
+      <task id="book" />
+      <sequenceFlow id="tf2" sourceRef="book" targetRef="tgw" />
+      <exclusiveGateway id="tgw" default="tf4" />
+      <sequenceFlow id="tf3" sourceRef="tgw" targetRef="tcancel">
+        <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= takeOnce()</conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="tf4" sourceRef="tgw" targetRef="tend" />
+      <endEvent id="tcancel"><cancelEventDefinition /></endEvent>
+      <endEvent id="tend" />
+    </transaction>
+    <boundaryEvent id="cancelled" attachedToRef="trans"><cancelEventDefinition /></boundaryEvent>
+    <sequenceFlow id="f2" sourceRef="trans" targetRef="booked" />
+    <endEvent id="booked" />
+    <sequenceFlow id="f3" sourceRef="cancelled" targetRef="handle" />
+    <task id="handle" />
+    <sequenceFlow id="f4" sourceRef="handle" targetRef="trans" />
+  </process>
+</definitions>`;
+
+  const definition = await createDefinition(source, { step: true });
+
+  let finished = false;
+  const done = runDefinition(definition).then((result) => {
+    finished = true;
+    return result;
+  });
+
+  await Promise.resolve();
+  let guard = 800;
+  while (!finished && guard--) {
+    stepDefinition(definition);
+    await Promise.resolve();
+  }
+
+  const { events } = await done;
+  assert.equal(finished, true, 'stepping should complete the transaction retry');
+  assert.ok(
+    events.some((e) => e.event === 'activity.end' && e.id === 'cancelled'),
+    'cancel boundary should have fired on the first pass',
+  );
+  assert.ok(
+    events.some((e) => e.event === 'activity.end' && e.id === 'booked'),
+    'second pass should reach the booked end event',
+  );
 });
 
 test('step mode is exempt from the touch limit', async () => {

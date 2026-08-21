@@ -1,6 +1,6 @@
 {
   "name": "zerodep-web",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
@@ -16,7 +16,7 @@
   "author": "Pål Edman",
   "devDependencies": {
     "@0dep/bpmn-extensions": "^0.0.4",
-    "bpmn-elements": "^18.0.17",
+    "bpmn-elements": "^18.0.20",
     "bpmn-js": "^18.24.0",
     "bpmn-moddle": "^10.1.0",
     "camunda-bpmn-moddle": "^7.0.1",

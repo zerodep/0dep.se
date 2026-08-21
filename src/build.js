@@ -290,15 +290,77 @@ ${ldBlocks}
 `;
 }
 
+const runFaq = [
+  {
+    q: 'Is any data transmitted when I run a diagram?',
+    a: 'No data is transmitted. This is a static page and the engine runs entirely in your browser — diagrams, DMN files, and variables never leave your machine. The page makes no network requests with your content, and its Content-Security-Policy blocks requests to any other origin. The site is open source, so you can verify this in the code.',
+  },
+  {
+    q: 'Does it work offline?',
+    a: 'Yes. After your first visit a service worker caches the page and the engine, so you can run BPMN diagrams entirely offline — which is also an easy way to see for yourself that nothing is transmitted.',
+  },
+  {
+    q: 'Which BPMN elements are supported?',
+    a: 'Tasks, service, script, user and manual tasks, gateways, sequence flow conditions, timers and boundary events. FEEL expressions and zeebe (Camunda 8) extension elements are evaluated, Camunda 7 service and script tasks run through, and business rule tasks evaluate DMN 1.3 decision tables.',
+  },
+  {
+    q: 'What engine powers the runner?',
+    a: 'bpmn-elements wired with @0dep/bpmn-extensions and dmn-elements — the same open-source building blocks behind bpmn-engine on npm — with the diagram drawn by bpmn-js.',
+  },
+];
+
+function ldRun(site) {
+  const baseUrl = `https://${site.primaryDomain}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'zerodep BPMN runner',
+      url: `${baseUrl}/run/`,
+      description: 'Run BPMN 2.0 diagrams online — a free in-browser BPMN and DMN engine.',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Any — runs in the web browser',
+      browserRequirements: 'Requires JavaScript',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Execute BPMN 2.0 diagrams client-side',
+        'FEEL expressions and zeebe (Camunda 8) extension elements',
+        'Camunda 7 diagrams run through',
+        'DMN 1.3 decision tables for business rule tasks',
+        'Step mode, signalable user tasks, cancellable timers',
+        'Diagram rendering with live markers and taken counters',
+        'Execution log and performance stats',
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: runFaq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    },
+  ];
+}
+
 function renderRun(site) {
+  const faq = runFaq
+    .map(
+      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
+    )
+    .join('\n');
+  const ldBlocks = ldRun(site).map(jsonLd).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
     site,
-    title: `Run a BPMN diagram — ${site.title}`,
+    title: `Run BPMN diagrams online — browser BPMN 2.0 & DMN engine — ${site.title}`,
     description:
-      'Paste or drop a BPMN 2.0 diagram and execute it in the browser — bpmn-elements with FEEL expressions and zeebe extension elements via @0dep/bpmn-extensions, rendered with bpmn-js.',
+      'Free online BPMN runner: paste or drop a BPMN 2.0 diagram and execute it in your browser — step through the run, signal user tasks, evaluate DMN decision tables. No upload, no account. Powered by bpmn-elements with FEEL and zeebe extensions.',
+    keywords:
+      'run bpmn online, bpmn simulator, bpmn runner, execute bpmn diagram, test bpmn online, bpmn 2.0 engine, browser bpmn engine, dmn decision table online, feel expressions, camunda 7, camunda 8, zeebe, bpmn-elements, bpmn-engine',
     path: '/run/',
     // everything is self-hosted; unsafe-inline styles for bpmn-js inline style attributes
     csp: "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'",
@@ -339,17 +401,20 @@ ${head({
         <p id="properties-taken"></p>
         <pre id="properties-body"></pre>
       </div>
-      <details class="run-log" id="log-details">
-        <summary>Execution log</summary>
-        <ul id="log"></ul>
-        <pre id="output"></pre>
-        <p id="stats-total" hidden></p>
-        <table id="stats" hidden>
+      <details class="run-log" id="stats-details" hidden>
+        <summary>Execution stats <span id="run-state"></span></summary>
+        <p id="stats-total"></p>
+        <table id="stats">
           <thead>
             <tr><th>Activity</th><th>Type</th><th>Runs</th><th>Total ms</th></tr>
           </thead>
           <tbody id="stats-body"></tbody>
         </table>
+      </details>
+      <details class="run-log" id="log-details">
+        <summary>Execution log</summary>
+        <ul id="log"></ul>
+        <pre id="output"></pre>
       </details>
     </section>
     <section class="run-dmn" data-dmn-dropzone aria-label="Decisions">
@@ -364,11 +429,49 @@ ${head({
       <textarea id="variables" class="variables" spellcheck="false" placeholder='{ "order": { "total": 199 } }'></textarea>
       <p class="hint">FEEL expressions plus zeebe and camunda 7 extension elements are supported. Unregistered service task types and foreign script formats run through, and waiting manual and user tasks get a Signal button in the log unless bypassed. The helpers <code>takeOnce</code> and <code>takeTwice</code> make circular flows terminate: use <code>= takeOnce()</code> in a loop-back condition, or <code>takeTwice</code> as a service task type and <code>= taken</code> on the flow.</p>
     </section>
+    <section class="run-about">
+      <h2>A free online BPMN engine, in your browser</h2>
+      <p>This page executes BPMN 2.0 diagrams entirely client-side: paste XML straight from your modeler or drop a <code>.bpmn</code> file, run or step through the flow, signal waiting tasks, and watch elements light up with taken counters &mdash; your diagrams never leave the browser. Business rule tasks evaluate DMN decision tables dropped alongside.</p>
+      <dl class="faq">
+${faq}
+      </dl>
+      <p class="source">Don&rsquo;t take our word for it &mdash; the whole site is open source: <a href="${escape(site.sourceRepo)}" rel="noopener">${escape(site.sourceRepo.replace('https://', ''))}</a>.</p>
+    </section>
   </main>
 ${footer(site)}
+${ldBlocks}
   <script type="module" src="/run/app.js"></script>
 </body>
 </html>
+`;
+}
+
+/**
+ * Cache-first service worker so /run/ works offline. The cache name carries a
+ * content hash — a new deploy installs a fresh cache and drops the old one.
+ */
+function renderServiceWorker(assets, version) {
+  return `const CACHE = 'run-${version}';
+const ASSETS = ${JSON.stringify(assets, null, 1)};
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key.startsWith('run-')).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request))
+  );
+});
 `;
 }
 
@@ -420,8 +523,8 @@ function sitemapXml(site) {
   <url>
     <loc>${base}/run/</loc>
     <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>${base}/about/</loc>
@@ -462,6 +565,29 @@ export async function build() {
   for (const f of ['pricing.bpmn', 'discount.dmn']) {
     await copyFile(join(root, 'test', 'resources', f), join(distDir, 'run', f));
   }
+
+  // offline support: precache everything /run/ needs, versioned by content
+  const chunkFiles = (await readdir(join(distDir, 'run', 'chunks'))).filter((f) => f.endsWith('.js'));
+  const runAssets = [
+    '/run/',
+    '/run/index.html',
+    '/run/app.js',
+    ...chunkFiles.map((f) => `/run/chunks/${f}`),
+    '/run/diagram-js.css',
+    '/run/bpmn-js.css',
+    '/run/pricing.bpmn',
+    '/run/discount.dmn',
+    '/styles.css',
+    '/favicon-32.png',
+    '/favicon-192.png',
+  ];
+  const swVersion = crc32(
+    Buffer.concat(await Promise.all([
+      readFile(join(distDir, 'run', 'app.js')),
+      readFile(join(distDir, 'run', 'index.html')),
+    ])),
+  ).toString(16);
+  await writeFile(join(distDir, 'run', 'sw.js'), renderServiceWorker(runAssets, swVersion));
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {

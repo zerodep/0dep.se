@@ -305,6 +305,7 @@ main.profile {
   font-size: 0.95rem;
 }
 .run-log summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.run-log summary #run-state { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
 .run-log #log {
   list-style: none;
   margin: 0;
@@ -467,6 +468,13 @@ main.profile {
   border-radius: 6px;
   padding: 0.1rem 0.3rem;
 }
+
+.run-about { max-width: 46rem; }
+.run-about h2 { font-size: 1.2rem; margin: 0 0 0.75rem; }
+.run-about p { margin: 0; color: var(--muted); }
+.run-about .faq { margin: 1.25rem 0 0; }
+.run-about .faq dt { font-weight: 600; margin-top: 1rem; }
+.run-about .faq dd { margin: 0.25rem 0 0; color: var(--muted); }
 
 /* dmn decision list */
 .run-dmn {

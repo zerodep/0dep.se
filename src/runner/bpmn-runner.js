@@ -279,8 +279,11 @@ export function runDefinition(definition, options = {}) {
       'event',
       '#',
       (routingKey, message) => {
-        const { id, type, name, executionId } = message.content;
+        const { id, type, name, executionId, accepts } = message.content;
         const entry = { event: routingKey, id, type, name };
+        // which api messages the element acts on while postponed — drives
+        // whether Signal/Cancel make sense for this entry
+        if (accepts) entry.accepts = accepts;
         if (routingKey === 'activity.timer') {
           entry.timeout = message.content.timeout;
           entry.api = definition.getApi(message);
@@ -353,17 +356,63 @@ export function runDefinition(definition, options = {}) {
 }
 
 /**
- * Advance a step-mode run: nudge every activity of every running process one
- * run-step. Returns true if anything advanced.
+ * Advance a step-mode run: nudge each postponed element of every running
+ * process one run-step. Returns true if anything advanced.
  */
 export function stepDefinition(definition) {
   let advanced = false;
   for (const bp of definition.getRunningProcesses() || []) {
-    for (const activity of bp.getActivities()) {
-      if (activity.next()) advanced = true;
-    }
+    if (stepPostponed(bp.getPostponed(), bp)) advanced = true;
   }
   return advanced;
+}
+
+function stepPostponed(postponed, activityScope) {
+  let advanced = false;
+  for (const api of postponed) {
+    const owner = api.owner;
+
+    // a sub-process carries its own postponed elements with their own run
+    // queues — recurse before nudging the sub-process activity itself. Its
+    // getPostponed() includes apis for the sub-process's own execution, which
+    // would recurse forever — only descend into actual inner elements. The
+    // inner process executions resolve endpoint activities of parked inner
+    // loop-back flows.
+    if (owner.isSubProcess && typeof api.getPostponed === 'function') {
+      const inner = api.getPostponed().filter((sub) => sub.owner !== owner);
+      if (stepPostponed(inner, subProcessScope(owner))) advanced = true;
+    }
+
+    if (typeof owner.next === 'function') {
+      if (owner.next()) advanced = true;
+      continue;
+    }
+
+    // a looped sequence flow parks postponed until its endpoints drain their
+    // run queues (e.g. the target's unacked run.leave from its previous run)
+    // — flows have no next(), so nudge the activities on either end
+    if (!activityScope) continue;
+    for (const activityId of [owner.sourceId, owner.targetId]) {
+      const activity = activityId && activityScope.getActivityById(activityId);
+      if (activity?.next?.()) advanced = true;
+    }
+  }
+
+  return advanced;
+}
+
+/** Activity lookup across a sub-process's running executions. */
+function subProcessScope(subProcess) {
+  const executions = subProcess.execution?.source?.executions || [];
+  return {
+    getActivityById(activityId) {
+      for (const pe of executions) {
+        const activity = pe.getActivityById(activityId);
+        if (activity) return activity;
+      }
+      return undefined;
+    },
+  };
 }
 
 /**

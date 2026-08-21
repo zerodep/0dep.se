@@ -98,7 +98,8 @@ test('Load example loads the pricing resources and runs the decision', async () 
   click(document.querySelector('#run'));
   await waitFor(() => document.querySelector('#output').textContent);
   assert.match(document.querySelector('#output').textContent, /"rebate": 0.1/);
-  assert.equal(document.querySelector('#stats').hasAttribute('hidden'), false);
+  assert.equal(document.querySelector('#stats-details').hasAttribute('hidden'), false, 'stats section should appear after the run');
+  assert.match(document.querySelector('#run-state').textContent, /completed/i);
 
   // clean the decisions list for following tests
   const listItems = () => [...document.querySelectorAll('#dmn-list li')];
@@ -119,6 +120,7 @@ test('a wait auto-expands the log and Signal accepts a JSON payload', async () =
 
   const payloadInput = waitLine.querySelector('input.signal-payload');
   assert.ok(payloadInput, 'wait line should have a payload input');
+  assert.match(document.querySelector('#run-state').textContent, /wait/i, 'state should show the engine wait status');
   payloadInput.value = '{ "approved": true }';
   click(waitLine.querySelector('button'));
 
@@ -190,6 +192,7 @@ test('dropping a new bpmn diagram mid-run stops the run and resets the Run butto
   );
   assert.equal(document.querySelector('#step').disabled, true, 'step should be back to disabled');
   assert.match(document.querySelector('#source').value, /Def_ui2/, 'dropped source should be loaded');
+  assert.match(document.querySelector('#run-state').textContent, /stopped/i, 'state should show stopped');
 });
 
 test('the loop-guard dropdown sets the touch limit for the run', async () => {
@@ -243,6 +246,68 @@ test('a timer line has a Cancel button that skips the wait', async () => {
 
   await waitFor(() => document.querySelector('#output').textContent);
   assert.equal(cancelBtn.disabled, true, 'cancel button should retire after use');
+});
+
+test('wait lines only offer Signal when the element accepts it', async () => {
+  document.querySelector('#source').value = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_uiaccepts" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="approve" />
+    <userTask id="approve" />
+    <boundaryEvent id="onerr" attachedToRef="approve"><errorEventDefinition /></boundaryEvent>
+    <sequenceFlow id="f2" sourceRef="approve" targetRef="end" />
+    <endEvent id="end" />
+    <sequenceFlow id="f3" sourceRef="onerr" targetRef="failed" />
+    <endEvent id="failed" />
+  </process>
+</definitions>`;
+  document.querySelector('#variables').value = '';
+  click(document.querySelector('#run'));
+
+  await waitFor(() => document.querySelectorAll('#log li.wait').length === 2);
+  const lines = [...document.querySelectorAll('#log li.wait')];
+  const approveLine = lines.find((li) => li.textContent.includes('approve'));
+  const errorLine = lines.find((li) => li.textContent.includes('onerr'));
+
+  assert.ok(approveLine.querySelector('button'), 'signal-accepting wait should have a button');
+  assert.equal(errorLine.querySelector('button'), null, 'error-only wait should have no button');
+  assert.equal(errorLine.querySelector('input'), null, 'error-only wait should have no payload input');
+
+  click(approveLine.querySelector('button'));
+  await waitFor(() => document.querySelector('#output').textContent);
+});
+
+test('a conditional event wait line offers both Signal and Cancel', async () => {
+  document.querySelector('#source').value = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_uicond" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="p" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="cond" />
+    <intermediateCatchEvent id="cond">
+      <conditionalEventDefinition>
+        <condition xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= ready = true</condition>
+      </conditionalEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="f2" sourceRef="cond" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+  document.querySelector('#variables').value = '{ "ready": false }';
+  click(document.querySelector('#run'));
+
+  const waitLine = await waitFor(() => document.querySelector('#log li.wait'));
+  const buttons = [...waitLine.querySelectorAll('button')].map((b) => b.textContent);
+  assert.deepEqual(buttons, ['Signal', 'Cancel'], `expected Signal and Cancel, got ${buttons}`);
+
+  // signalling with a false condition keeps it waiting; cancel completes
+  click([...waitLine.querySelectorAll('button')].find((b) => b.textContent === 'Signal'));
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(document.querySelector('#output').textContent, '', 'false condition should keep waiting');
+
+  click([...waitLine.querySelectorAll('button')].find((b) => b.textContent === 'Cancel'));
+  await waitFor(() => document.querySelector('#output').textContent);
+  assert.match(document.querySelector('#run-state').textContent, /completed/i);
 });
 
 test('a discarded waiting activity gets its Signal disabled and the line marked', async () => {

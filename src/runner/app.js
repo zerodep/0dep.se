@@ -14,9 +14,14 @@ const bypassEl = document.querySelector('#bypass');
 const maxTouchesEl = document.querySelector('#max-touches');
 const logEl = document.querySelector('#log');
 const logDetails = document.querySelector('#log-details');
+const statsDetails = document.querySelector('#stats-details');
+const runStateEl = document.querySelector('#run-state');
 const statsTotal = document.querySelector('#stats-total');
-const statsTable = document.querySelector('#stats');
 const statsBody = document.querySelector('#stats-body');
+
+function setRunState(state) {
+  runStateEl.textContent = state ? `— ${state}` : '';
+}
 const outputEl = document.querySelector('#output');
 const dropzone = document.querySelector('[data-dropzone]');
 const canvasEl = document.querySelector('#canvas');
@@ -118,8 +123,6 @@ function renderStats(stats) {
   }
   const totalRuns = stats.activities.reduce((n, a) => n + a.runs, 0);
   statsTotal.textContent = `Run took ${stats.duration.toFixed(1)} ms — ${stats.activities.length} activities, ${totalRuns} activity runs`;
-  statsTotal.hidden = false;
-  statsTable.hidden = false;
 }
 
 function describe(entry) {
@@ -149,7 +152,8 @@ function trackOpenWait(id, openWait) {
 function retireWaits(id, { silent } = {}) {
   for (const wait of openWaits.get(id) || []) {
     if (wait.input) wait.input.disabled = true;
-    wait.btn.disabled = true;
+    if (wait.btn) wait.btn.disabled = true;
+    for (const btn of wait.buttons || []) btn.disabled = true;
     if (!silent) {
       wait.li.classList.add('discarded');
       wait.li.append(' — discarded');
@@ -169,6 +173,11 @@ function logTimer(entry) {
   li.className = 'timer wait';
   li.append(`${describe(entry)} — waiting ${entry.timeout} ms`);
 
+  if (!acceptsApi(entry, 'cancel')) {
+    logEl.append(li);
+    return;
+  }
+
   const cancelBtn = document.createElement('button');
   cancelBtn.type = 'button';
   cancelBtn.textContent = 'Cancel';
@@ -183,12 +192,22 @@ function logTimer(entry) {
   logEl.append(li);
 }
 
+// absent accepts (older engine messages) falls back to offering the control
+const acceptsApi = (entry, apiType) => !entry.accepts || entry.accepts.includes(apiType);
+
 function logWait(entry) {
   logDetails.open = true;
 
   const li = document.createElement('li');
   li.className = 'wait';
   li.append(describe(entry));
+
+  if (!acceptsApi(entry, 'signal')) {
+    // nothing the user can click for this wait (e.g. an error catch) — plain line
+    logEl.append(li);
+    trackOpenWait(entry.id, { li, btn: { disabled: true } });
+    return;
+  }
 
   const payloadInput = document.createElement('input');
   payloadInput.type = 'text';
@@ -213,9 +232,8 @@ function logWait(entry) {
       }
     }
     payloadInput.classList.remove('invalid');
-    payloadInput.disabled = true;
-    signalBtn.disabled = true;
-    removeOpenWait();
+    // don't retire here — a conditional event may stay waiting on a false
+    // condition; completion or discard retires the line via retireWaits
     entry.api.signal(payload);
   };
 
@@ -225,9 +243,21 @@ function logWait(entry) {
   });
 
   li.append(' ', payloadInput, ' ', signalBtn);
-  logEl.append(li);
 
-  const removeOpenWait = trackOpenWait(entry.id, { li, input: payloadInput, btn: signalBtn });
+  const buttons = [signalBtn];
+  if (acceptsApi(entry, 'cancel') && entry.accepts?.includes('cancel')) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+      entry.api.cancel();
+    }, { once: true });
+    li.append(' ', cancelBtn);
+    buttons.push(cancelBtn);
+  }
+
+  logEl.append(li);
+  trackOpenWait(entry.id, { li, input: payloadInput, buttons });
 }
 
 // --- diagram viewer (bpmn-js), loaded as a separate module chunk on demand ---
@@ -391,8 +421,10 @@ function diagramMarkers(viewer) {
 async function run() {
   logEl.textContent = '';
   outputEl.textContent = '';
-  statsTotal.hidden = true;
-  statsTable.hidden = true;
+  statsTotal.textContent = '';
+  statsBody.textContent = '';
+  statsDetails.hidden = false;
+  setRunState('starting');
   openWaits.clear();
   runCounts.clear();
   runBtn.disabled = true;
@@ -439,6 +471,7 @@ async function run() {
       autoSignal: bypassEl.checked,
       maxTouches: Number(maxTouchesEl.value) || 10,
       onEvent(entry) {
+        setRunState(definition.activityStatus);
         if (entry.event === 'activity.enter') mark(entry.id, 'run-active');
         else if (entry.event === 'activity.end') {
           mark(entry.id, 'run-completed', 'run-active');
@@ -471,12 +504,15 @@ async function run() {
       },
     });
     if (stopped) {
+      setRunState('stopped');
       logLine('run stopped', { className: 'muted' });
       return;
     }
+    setRunState('completed');
     outputEl.textContent = `output: ${JSON.stringify(output, null, 2)}`;
     renderStats(stats);
   } catch (err) {
+    setRunState('errored');
     logLine(String(err && err.message || err), { className: 'error' });
   } finally {
     runningDefinition = null;
@@ -540,3 +576,10 @@ wireDropzone(dropzone, async ([file]) => {
 wireDropzone(dmnDropzone, (files) => {
   for (const file of files) addDmnFile(file);
 });
+
+// offline support — the service worker precaches the page and engine bundles
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/run/sw.js').catch(() => {
+    /* offline support is progressive enhancement — a failed registration is fine */
+  });
+}
