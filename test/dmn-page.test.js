@@ -115,8 +115,15 @@ test('dmn page title and description target online-evaluator searches', () => {
   assert.match(desc.toLowerCase(), /browser/);
   assert.match(desc.toLowerCase(), /decision/);
   const keywords = dmnDoc.querySelector('meta[name="keywords"]')?.getAttribute('content') ?? '';
-  assert.ok(keywords.toLowerCase().includes('dmn decision table online'), 'keywords should include dmn decision table online');
-  assert.ok(keywords.toLowerCase().includes('evaluate dmn online'), 'keywords should include evaluate dmn online');
+  for (const phrase of ['dmn decision table online', 'evaluate dmn online', 'online dmn runner', 'dmn evaluator', 'camunda dmn', 'decision requirements graph', 'feel expression']) {
+    assert.ok(keywords.toLowerCase().includes(phrase), `keywords should include ${phrase}`);
+  }
+});
+
+test('dmn page about content covers chained decisions and modeler exports', () => {
+  const about = dmnDoc.querySelector('section.run-about');
+  assert.match(about.textContent.toLowerCase(), /chained|requirement graph/, 'should mention chained decisions / the DRG');
+  assert.match(about.textContent, /Camunda Modeler/, 'should mention Camunda Modeler exports');
 });
 
 test('dmn page has WebApplication and FAQPage JSON-LD', () => {

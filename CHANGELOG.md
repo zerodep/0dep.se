@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.0 - 2026-08-21
+
+- the `/dmn/` decision picker preselects the DRG's output decision (the one no other decision requires), so evaluating a chained model exercises the whole graph by default
+- MCP support: `npm run mcp` starts a stdio MCP server (hand-rolled JSON-RPC 2.0, no SDK dependency) exposing `run_bpmn` (auto-signaled waits, DMN-backed business rule tasks, loop guard), `evaluate_dmn` (defaults to the output decision, returns result + trace), and `list_dmn_decisions` (with required inputs) — the same engine wiring the runner pages use
+- beyond-Google SEO: IndexNow key + deploy-time ping (Bing, Yandex, Naver, Seznam) and a generated `llms.txt` site summary for AI crawlers
+- `/dmn/` SEO pass: title/description/keywords target "online dmn runner", "dmn evaluator", "camunda dmn", and requirement-graph searches; the crawlable about text and WebApplication featureList cover chained decisions, the input form, and Camunda Modeler / dmn-js exports; "online bpmn and dmn runner" added to the `/run/` and home keywords
+
 ## v1.1.0 - 2026-08-21
 
 - new `/dmn/` page: evaluate DMN decisions entirely in the browser — paste or drop a `.dmn`, pick a decision (decision services included), evaluate with JSON input data, powered by dmn-elements

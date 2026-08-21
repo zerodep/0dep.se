@@ -1,4 +1,4 @@
-import { createDmnRunner, evaluateDecision, listRequiredInputs } from './dmn-runner.js';
+import { createDmnRunner, evaluateDecision, listRequiredInputs, pickOutputDecision } from './dmn-runner.js';
 import { makeTakeHelper } from './take-helper.js';
 
 // --- demo services ---
@@ -267,7 +267,7 @@ async function refreshSource() {
       decisionSelect.append(option);
     }
     if (runner.decisions.some((d) => d.id === previous)) decisionSelect.value = previous;
-    else if (runner.decisions.length) decisionSelect.value = runner.decisions[0].id;
+    else if (runner.decisions.length) decisionSelect.value = pickOutputDecision(runner.rootElement);
 
     renderTables(runner.rootElement);
     updateRequiredInputs();

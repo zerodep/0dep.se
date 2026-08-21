@@ -142,6 +142,20 @@ test('the discount example declares its total input for the form', async () => {
   assert.deepEqual(listRequiredInputs(rootElement, 'discount'), [{ name: 'total', typeRef: 'number' }]);
 });
 
+test('pickOutputDecision prefers a decision no other decision requires', async () => {
+  const { pickOutputDecision } = await import('../src/runner/dmn-runner.js');
+
+  // grantTotal requires firstGrant and secondGrant — it is the output decision
+  const takeOnce = await readFile(join(resources, 'take-once.dmn'), 'utf8');
+  const { rootElement: takeOnceRoot } = await createDmnRunner(takeOnce);
+  assert.equal(pickOutputDecision(takeOnceRoot), 'grantTotal');
+
+  // single decision — trivially the output
+  const discount = await readFile(join(resources, 'discount.dmn'), 'utf8');
+  const { rootElement: discountRoot } = await createDmnRunner(discount);
+  assert.equal(pickOutputDecision(discountRoot), 'discount');
+});
+
 test('a promise-returning service fails the evaluation loudly', async () => {
   const dmn = await readFile(join(resources, 'exchange.dmn'), 'utf8');
   // the parameter matters — feelin parses the signature for arity and

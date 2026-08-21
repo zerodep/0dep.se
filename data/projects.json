@@ -5,7 +5,30 @@
     "intro": "A collection of focused npm packages with zero (or near-zero) runtime dependencies, plus the BPMN engine ecosystem they grew up around. Open source, MIT, maintained by Pål Edman.",
     "seoTitle": "zerodep — small JavaScript packages and the bpmn-engine ecosystem",
     "seoDescription": "Open-source npm packages with zero runtime dependencies, plus bpmn-engine — the JavaScript BPMN 2.0 execution engine for Node.js. Includes DMN decision evaluation, ISO 8601 parsing, structured logging, workflow middleware, and testing utilities.",
-    "keywords": ["zerodep", "bpmn", "bpmn-engine", "bpmn 2.0", "dmn", "dmn 1.3", "decision table", "decision engine", "feel", "workflow engine", "workflow automation", "run bpmn online", "bpmn simulator", "javascript", "typescript", "nodejs", "npm", "iso 8601", "express middleware", "open source"],
+    "keywords": [
+      "zerodep",
+      "bpmn",
+      "bpmn-engine",
+      "bpmn 2.0",
+      "dmn",
+      "dmn 1.3",
+      "decision table",
+      "decision engine",
+      "feel",
+      "workflow engine",
+      "workflow automation",
+      "run bpmn online",
+      "bpmn simulator",
+      "online bpmn and dmn runner",
+      "run dmn online",
+      "javascript",
+      "typescript",
+      "nodejs",
+      "npm",
+      "iso 8601",
+      "express middleware",
+      "open source"
+    ],
     "ogImage": "/logo.png",
     "primaryDomain": "0dep.se",
     "altDomains": [],
@@ -26,7 +49,12 @@
           "description": "ISO 8601 parser for intervals, durations, dates, and week numbers. Converts to milliseconds, ISO strings, and Date objects with full standard coverage.",
           "repo": "https://github.com/zerodep/piso",
           "npm": "@0dep/piso",
-          "tags": ["iso-8601", "duration", "interval", "parser"]
+          "tags": [
+            "iso-8601",
+            "duration",
+            "interval",
+            "parser"
+          ]
         },
         {
           "slug": "pino-applicationinsights",
@@ -34,7 +62,12 @@
           "description": "Pino logger transport that forwards structured logs to Azure Application Insights. Compatible with both v2 and v3 of the Application Insights SDK.",
           "repo": "https://github.com/zerodep/pino-applicationinsights",
           "npm": "@0dep/pino-applicationinsights",
-          "tags": ["logging", "pino", "azure", "telemetry"]
+          "tags": [
+            "logging",
+            "pino",
+            "azure",
+            "telemetry"
+          ]
         },
         {
           "slug": "ocrgenerator",
@@ -42,7 +75,12 @@
           "description": "Swedish invoice number (OCR/fakturanummer) generator and validator. Supports Bankgirot and Plusgirot reference formats with modulus-10 (Luhn) check digits.",
           "repo": "https://github.com/zerodep/ocrgenerator",
           "npm": "ocrgenerator",
-          "tags": ["sweden", "invoice", "luhn", "validator"]
+          "tags": [
+            "sweden",
+            "invoice",
+            "luhn",
+            "validator"
+          ]
         },
         {
           "slug": "texample",
@@ -50,7 +88,12 @@
           "description": "Run the JavaScript code blocks in your README as live tests. Keeps documentation honest by failing CI when an example breaks.",
           "repo": "https://github.com/zerodep/texample",
           "npm": "texample",
-          "tags": ["docs", "testing", "markdown", "ci"]
+          "tags": [
+            "docs",
+            "testing",
+            "markdown",
+            "ci"
+          ]
         }
       ]
     },
@@ -58,7 +101,10 @@
       "id": "bpmn-engine",
       "title": "BPMN engine ecosystem",
       "description": "The BPMN 2.0 engine and its building blocks. Used together to execute, extend, and serialize workflow processes in JavaScript and TypeScript.",
-      "link": { "href": "/run/", "label": "Try it live — paste a BPMN diagram and run it in the browser" },
+      "link": {
+        "href": "/run/",
+        "label": "Try it live — paste a BPMN diagram and run it in the browser"
+      },
       "projects": [
         {
           "slug": "bpmn-engine",
@@ -66,7 +112,12 @@
           "description": "BPMN 2.0 execution engine for Node.js and the browser. Runs business processes defined in standard BPMN XML, with TypeScript types, ESM/CJS support, and granular debug logging.",
           "repo": "https://github.com/paed01/bpmn-engine",
           "npm": "bpmn-engine",
-          "tags": ["bpmn", "workflow", "engine", "process"]
+          "tags": [
+            "bpmn",
+            "workflow",
+            "engine",
+            "process"
+          ]
         },
         {
           "slug": "bpmn-middleware",
@@ -74,7 +125,12 @@
           "description": "Express middleware that runs the BPMN engine inside a Node.js HTTP application. Handles process state, call activities, and workflow orchestration over REST.",
           "repo": "https://github.com/zerodep/bpmn-middleware",
           "npm": "bpmn-middleware",
-          "tags": ["bpmn", "express", "workflow", "middleware"]
+          "tags": [
+            "bpmn",
+            "express",
+            "workflow",
+            "middleware"
+          ]
         },
         {
           "slug": "bpmn-elements",
@@ -82,7 +138,11 @@
           "description": "Executable workflow elements that implement the BPMN 2.0 specification. The building blocks behind bpmn-engine, usable on their own to assemble custom runtimes.",
           "repo": "https://github.com/paed01/bpmn-elements",
           "npm": "bpmn-elements",
-          "tags": ["bpmn", "workflow", "elements"]
+          "tags": [
+            "bpmn",
+            "workflow",
+            "elements"
+          ]
         },
         {
           "slug": "dmn-elements",
@@ -90,8 +150,16 @@
           "description": "Executable DMN 1.3 decision elements: parse decision requirement graphs and evaluate decision tables and boxed expressions with FEEL. The decision-side sibling of bpmn-elements.",
           "repo": "https://github.com/zerodep/dmn-elements",
           "npm": "dmn-elements",
-          "link": { "href": "/dmn/", "label": "Try it live" },
-          "tags": ["dmn", "decision-table", "feel", "drg"]
+          "link": {
+            "href": "/dmn/",
+            "label": "Try it live"
+          },
+          "tags": [
+            "dmn",
+            "decision-table",
+            "feel",
+            "drg"
+          ]
         },
         {
           "slug": "smqp",
@@ -99,7 +167,12 @@
           "description": "Synchronous in-process message broker with exchanges, queues, topics, and ack/nack semantics. Underpins bpmn-engine and bpmn-elements without pulling in a real broker dependency.",
           "repo": "https://github.com/paed01/smqp",
           "npm": "smqp",
-          "tags": ["messaging", "broker", "queue", "pubsub"]
+          "tags": [
+            "messaging",
+            "broker",
+            "queue",
+            "pubsub"
+          ]
         },
         {
           "slug": "moddle-context-serializer",
@@ -107,7 +180,11 @@
           "description": "Serialize bpmn-moddle contexts to JSON for storage and process state recovery. Pairs with bpmn-engine to persist long-running workflows.",
           "repo": "https://github.com/paed01/moddle-context-serializer",
           "npm": "moddle-context-serializer",
-          "tags": ["bpmn", "serializer", "moddle"]
+          "tags": [
+            "bpmn",
+            "serializer",
+            "moddle"
+          ]
         },
         {
           "slug": "bpmn-extensions",
@@ -115,7 +192,12 @@
           "description": "Flow extensions for bpmn-elements: FEEL expressions and the Zeebe-namespace BPMN extension elements for Camunda 8 style workflows.",
           "repo": "https://github.com/zerodep/bpmn-extensions",
           "npm": "@0dep/bpmn-extensions",
-          "tags": ["bpmn", "feel", "zeebe", "extensions"]
+          "tags": [
+            "bpmn",
+            "feel",
+            "zeebe",
+            "extensions"
+          ]
         },
         {
           "slug": "onify-flow-extensions",
@@ -123,7 +205,12 @@
           "description": "Onify Flow extensions for bpmn-engine. Adds the service tasks, listeners, and Camunda-style behaviours used by the Onify automation platform.",
           "repo": "https://github.com/onify/flow-extensions",
           "npm": "@onify/flow-extensions",
-          "tags": ["bpmn", "onify", "extensions", "automation"]
+          "tags": [
+            "bpmn",
+            "onify",
+            "extensions",
+            "automation"
+          ]
         }
       ]
     },
@@ -138,7 +225,12 @@
           "description": "Adds a Swagger / OpenAPI v3 specification to an Express application, derived automatically from the types of the routes registered on the app.",
           "repo": "https://github.com/allernordic/express-swagger",
           "npm": "@aller/express-swagger",
-          "tags": ["express", "openapi", "swagger", "typescript"]
+          "tags": [
+            "express",
+            "openapi",
+            "swagger",
+            "typescript"
+          ]
         },
         {
           "slug": "aller-pino-gcp-transport",
@@ -146,7 +238,12 @@
           "description": "Pino transport that emits Google Cloud structured logs to stdout. Drop-in for services running on GKE, Cloud Run, or anywhere GCP scrapes JSON logs.",
           "repo": "https://github.com/allermedia/pino-gcp-transport",
           "npm": "@aller/pino-gcp-transport",
-          "tags": ["pino", "logging", "gcp", "google-cloud"]
+          "tags": [
+            "pino",
+            "logging",
+            "gcp",
+            "google-cloud"
+          ]
         },
         {
           "slug": "onify-fake-amqplib",
@@ -154,7 +251,12 @@
           "description": "In-memory fake of the amqplib RabbitMQ client for unit tests. Drop-in API-compatible replacement so tests don't need a live broker.",
           "repo": "https://github.com/onify/fake-amqplib",
           "npm": "@onify/fake-amqplib",
-          "tags": ["testing", "amqp", "rabbitmq", "mock"]
+          "tags": [
+            "testing",
+            "amqp",
+            "rabbitmq",
+            "mock"
+          ]
         },
         {
           "slug": "chronokinesis",
@@ -162,7 +264,12 @@
           "description": "Time-travel for testing time-dependent code. Freeze, travel, and reset the clock — works with Date, hrtime, performance, and timezones.",
           "repo": "https://github.com/paed01/chronokinesis",
           "npm": "chronokinesis",
-          "tags": ["testing", "time", "mock", "timezone"]
+          "tags": [
+            "testing",
+            "time",
+            "mock",
+            "timezone"
+          ]
         }
       ]
     }

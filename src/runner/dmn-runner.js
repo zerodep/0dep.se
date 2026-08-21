@@ -18,6 +18,24 @@ export function listDecisions(rootElement) {
 }
 
 /**
+ * The id of the DRG's output decision — the first decision no other decision
+ * requires, falling back to the first decision. Evaluation walks upstream
+ * requirements, so the output decision is the one that exercises the whole
+ * graph and is almost always the one to evaluate.
+ */
+export function pickOutputDecision(rootElement) {
+  const required = new Set();
+  for (const element of rootElement.drgElement || []) {
+    for (const requirement of element.informationRequirement || []) {
+      const href = requirement.requiredDecision?.href;
+      if (href) required.add(href.replace(/^#/, ''));
+    }
+  }
+  const decisions = listDecisions(rootElement);
+  return (decisions.find((d) => !required.has(d.id)) || decisions[0])?.id;
+}
+
+/**
  * The declared input data a DRG element needs before it can be evaluated, as
  * `{ name, typeRef }` in requirement order — collected transitively through
  * required decisions, deduped by name. For a decision service the bound input

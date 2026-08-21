@@ -23,6 +23,7 @@ src/styles.css       styles (auto dark/light)
 src/runner/          browser runners: bpmn-runner.js (engine wiring), bpmn-app.js (/run/ page UI, esbuild entry),
                      dmn-runner.js (dmn-elements wiring, shared with bpmn-runner), dmn-app.js (/dmn/ page UI, esbuild entry),
                      take-helper.js (takeOnce/takeTwice counters shared by both runners)
+src/mcp-server.js    stdio MCP server exposing run_bpmn / evaluate_dmn / list_dmn_decisions (hand-rolled JSON-RPC, no SDK)
 src/serve.js         dev server on :8080
 test/                node:test specs (manifest schema + rendered HTML)
 .github/workflows/   GitHub Pages deploy

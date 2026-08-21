@@ -43,3 +43,21 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+      # Push-index the deployed pages with Bing, Yandex, Naver, and Seznam.
+      # The key is public by design and served from static/<key>.txt.
+      - name: Ping IndexNow
+        continue-on-error: true
+        run: |
+          curl -sS -X POST https://api.indexnow.org/indexnow \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d '{
+              "host": "0dep.se",
+              "key": "a70d5a0538ce1c4cba2f31cc7cbd60b8",
+              "keyLocation": "https://0dep.se/a70d5a0538ce1c4cba2f31cc7cbd60b8.txt",
+              "urlList": [
+                "https://0dep.se/",
+                "https://0dep.se/run/",
+                "https://0dep.se/dmn/",
+                "https://0dep.se/about/"
+              ]
+            }'

@@ -196,6 +196,27 @@ test('submitting the input form (Enter in a field) evaluates', async () => {
   await waitFor(() => document.querySelector('#result').textContent === '115');
 });
 
+test('the decision picker defaults to the output decision of a chained model', async () => {
+  setSource(`<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="chainDefinitions" name="Chain" namespace="https://example.com/dmn/chain-ui">
+  <decision id="first" name="First">
+    <variable id="firstVariable" name="first" typeRef="number" />
+    <literalExpression id="firstExpression"><text>1</text></literalExpression>
+  </decision>
+  <decision id="second" name="Second">
+    <variable id="secondVariable" name="second" typeRef="number" />
+    <informationRequirement id="secondReq"><requiredDecision href="#first" /></informationRequirement>
+    <literalExpression id="secondExpression"><text>first + 1</text></literalExpression>
+  </decision>
+</definitions>`);
+  await waitFor(() => document.querySelector('#decision option[value="second"]'));
+  assert.equal(
+    document.querySelector('#decision').value,
+    'second',
+    'the dependent (output) decision should be preselected, not the first in document order',
+  );
+});
+
 test('the input form hides when the source declares no input data', async () => {
   const src = await readFile(join(repoRoot, 'test', 'resources', 'take-once.dmn'), 'utf8');
   setSource(src);

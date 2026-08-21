@@ -363,7 +363,7 @@ ${head({
     description:
       'Free online BPMN runner: paste or drop a BPMN 2.0 diagram and execute it in your browser — step through the run, signal user tasks, evaluate DMN decision tables. No upload, no account. Powered by bpmn-elements with FEEL and zeebe extensions.',
     keywords:
-      'run bpmn online, bpmn simulator, bpmn runner, execute bpmn diagram, test bpmn online, bpmn 2.0 engine, browser bpmn engine, dmn decision table online, feel expressions, camunda 7, camunda 8, zeebe, bpmn-elements, bpmn-engine',
+      'run bpmn online, online bpmn runner, bpmn simulator, bpmn runner, execute bpmn diagram, test bpmn online, bpmn 2.0 engine, browser bpmn engine, dmn decision table online, online bpmn and dmn runner, feel expressions, camunda 7, camunda 8, zeebe, bpmn-elements, bpmn-engine',
     path: '/run/',
     // everything is self-hosted; unsafe-inline styles for bpmn-js inline style attributes
     csp: "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'",
@@ -482,11 +482,13 @@ function ldDmn(site) {
       browserRequirements: 'Requires JavaScript',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
       featureList: [
-        'Evaluate DMN 1.3 decisions client-side',
+        'Evaluate DMN 1.3 decisions client-side, chained through the decision requirements graph',
         'Decision tables rendered with matched-rule highlighting',
-        'Evaluation trace with hit policy resolution',
+        'Best-effort input form generated from declared input data',
+        'Evaluation trace with hit policy resolution and requirement bindings',
         'FEEL expressions and unary tests via feelin',
         'DMN 1.4 boxed expressions, decision services, and business knowledge models',
+        'Works with DMN exported from Camunda Modeler and dmn-js based tools',
         'Evaluation log',
       ],
     },
@@ -514,11 +516,11 @@ function renderDmn(site) {
 <head>
 ${head({
     site,
-    title: `Evaluate DMN decisions online — browser DMN decision engine — ${site.title}`,
+    title: `Evaluate DMN decisions online — browser DMN runner & decision engine — ${site.title}`,
     description:
-      'Free online DMN evaluator: paste or drop a DMN file and evaluate decisions in your browser — decision tables with matched-rule highlighting, evaluation trace, FEEL expressions. No upload, no account. Powered by dmn-elements.',
+      'Free online DMN runner and evaluator: paste or drop a DMN file and evaluate decisions in your browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace, FEEL expressions. No upload, no account. Powered by dmn-elements.',
     keywords:
-      'evaluate dmn online, dmn decision table online, run dmn online, dmn simulator, test dmn decision, dmn 1.3, dmn 1.4, decision table hit policy, browser dmn engine, feel expressions, dmn-elements, bpmn-engine',
+      'evaluate dmn online, online dmn runner, dmn evaluator, dmn decision table online, run dmn online, dmn simulator, test dmn decision, camunda dmn, decision requirements graph, drd, dmn 1.3, dmn 1.4, dmn 1.5, decision table hit policy, browser dmn engine, decision engine online, feel expression evaluator, online bpmn and dmn runner, dmn-elements, bpmn-engine',
     path: '/dmn/',
     // everything is self-hosted, and unlike /run/ nothing injects inline styles
     csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
@@ -579,7 +581,7 @@ ${head({
     </section>
     <section class="run-about">
       <h2>A free online DMN engine, in your browser</h2>
-      <p>This page evaluates DMN decisions entirely client-side: paste XML straight from your modeler or drop a <code>.dmn</code> file, pick a decision, and evaluate it with your input data &mdash; matched decision table rules light up and the trace shows how the result came to be. Your decisions never leave the browser, and after the first visit the page works offline.</p>
+      <p>This page evaluates DMN decisions entirely client-side: paste XML straight from your modeler or drop a <code>.dmn</code> file, pick a decision, and evaluate it with your input data &mdash; matched decision table rules light up and the trace shows how the result came to be. Chained decisions evaluate through the decision requirements graph (DRG): required decisions are walked bottom-up and the output decision is preselected, so files exported from Camunda Modeler or any dmn-js based tool run as-is. Your decisions never leave the browser, and after the first visit the page works offline. Need the process around the decisions? The <a href="/run/">online BPMN runner</a> executes whole diagrams, business rule tasks included.</p>
       <dl class="faq">
 ${faq}
       </dl>
@@ -646,6 +648,33 @@ function render404(site) {
   </header>
 </body>
 </html>
+`;
+}
+
+/**
+ * llms.txt — a markdown site summary for AI crawlers and answer engines
+ * (https://llmstxt.org). Generated from the manifest so it stays in sync.
+ */
+function llmsTxt(manifest) {
+  const { site, groups } = manifest;
+  const base = `https://${site.primaryDomain}`;
+  const groupSections = groups.map((g) => {
+    const projects = g.projects
+      .map((p) => `- [${p.name}](${p.repo}): ${p.description}`)
+      .join('\n');
+    return `## ${g.title}\n\n${projects}`;
+  });
+  return `# ${site.title}
+
+> ${site.seoDescription || site.tagline}
+
+## Pages
+
+- [Run BPMN online](${base}/run/): execute BPMN 2.0 diagrams entirely in the browser — FEEL expressions, zeebe and camunda 7 extensions, DMN decision tables via business rule tasks. Nothing is uploaded.
+- [Evaluate DMN online](${base}/dmn/): evaluate DMN decisions in the browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace.
+- [About](${base}/about/): the maintainer behind the packages.
+
+${groupSections.join('\n\n')}
 `;
 }
 
@@ -789,6 +818,7 @@ export async function build() {
   await writeFile(join(distDir, 'CNAME'), manifest.site.primaryDomain + '\n');
   await writeFile(join(distDir, 'robots.txt'), robotsTxt(manifest.site));
   await writeFile(join(distDir, 'sitemap.xml'), sitemapXml(manifest.site));
+  await writeFile(join(distDir, 'llms.txt'), llmsTxt(manifest));
 
   // Mirror static/ verbatim — site-verification HTML files, well-known endpoints, etc.
   let staticFiles = [];
