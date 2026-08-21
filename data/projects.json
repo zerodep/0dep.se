@@ -90,6 +90,7 @@
           "description": "Executable DMN 1.3 decision elements: parse decision requirement graphs and evaluate decision tables and boxed expressions with FEEL. The decision-side sibling of bpmn-elements.",
           "repo": "https://github.com/zerodep/dmn-elements",
           "npm": "dmn-elements",
+          "link": { "href": "/dmn/", "label": "Try it live" },
           "tags": ["dmn", "decision-table", "feel", "drg"]
         },
         {

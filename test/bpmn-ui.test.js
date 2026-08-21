@@ -38,7 +38,7 @@ before(async () => {
     const content = await readFile(join(repoRoot, 'dist', 'run', basename(String(url))), 'utf8');
     return { ok: true, text: async () => content };
   };
-  await import('../src/runner/app.js');
+  await import('../src/runner/bpmn-app.js');
 });
 
 const USER_TASK_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -53,7 +53,7 @@ const USER_TASK_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
 </definitions>`;
 
 test('counterBadges overlays taken counts on diagram elements', async () => {
-  const { counterBadges, takenCount } = await import('../src/runner/app.js');
+  const { counterBadges, takenCount } = await import('../src/runner/bpmn-app.js');
 
   const added = [];
   const fakeViewer = {

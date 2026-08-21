@@ -1,6 +1,7 @@
 import { BpmnModdle } from 'bpmn-moddle';
-import { DmnModdle } from 'dmn-moddle';
 import * as elements from 'bpmn-elements';
+import { parseDmn, listDecisions, forwardingLogger } from './dmn-runner.js';
+import { makeTakeHelper } from './take-helper.js';
 import { Context as DmnContext, Definition as DmnDefinition, Environment as DmnEnvironment } from 'dmn-elements';
 import { Serializer, TypeResolver } from 'moddle-context-serializer';
 import { extensions, extendFn, FeelExpressions, FeelScripts } from '@0dep/bpmn-extensions';
@@ -113,72 +114,38 @@ function warnLiteralConditions(context, onWarning) {
 }
 
 /**
- * Flow-control helper backing `takeOnce`/`takeTwice`. In a FEEL condition
- * (`= takeOnce()`, `= takeTwice("retry")`) it returns true the first `limit`
- * times per key and false after — handy to make circular demo diagrams
- * terminate. As a zeebe job type it completes the job with `{ taken }`,
- * counted per activity id, for `= taken` conditions downstream.
- */
-function makeTakeHelper(limit) {
-  const counts = new Map();
-  function bump(key) {
-    const n = (counts.get(key) || 0) + 1;
-    counts.set(key, n);
-    return n <= limit;
-  }
-  return function take(keyOrMessage, callback) {
-    if (typeof callback === 'function') {
-      return callback(null, { taken: bump(`service:${keyOrMessage?.content?.id || ''}`) });
-    }
-    return bump(typeof keyOrMessage === 'string' ? keyOrMessage : '$default');
-  };
-}
-
-async function parseDmn(source) {
-  const { rootElement } = await new DmnModdle().fromXML(String(source));
-  return rootElement;
-}
-
-function dmnDecisions(rootElement) {
-  return (rootElement.drgElement || []).filter((d) => d.$type === 'dmn:Decision');
-}
-
-/**
- * List the decisions of a DMN source as `{ id, name }`, for presenting what a
- * dropped file provides.
+ * List the decisions (and decision services) of a DMN source as `{ id, name }`,
+ * for presenting what a dropped file provides.
  */
 export async function listDmnDecisions(source) {
-  return dmnDecisions(await parseDmn(source)).map(({ id, name }) => ({ id, name }));
+  return listDecisions(await parseDmn(source)).map(({ id, name }) => ({ id, name }));
 }
 
 /**
- * Build one environment service per decision in the given DMN sources —
- * a business rule task's `zeebe:calledDecision` dispatches to a service named
- * by its decision id. The decision evaluates with the current process
- * variables (and any input mapping) as input; later sources win on id clashes.
+ * Build one environment service per decision (and decision service) in the
+ * given DMN sources — a business rule task's `zeebe:calledDecision` dispatches
+ * to a service named by its decision id. The decision evaluates with the
+ * current process variables (and any input mapping) as input; later sources
+ * win on id clashes. The BPMN environment's own services ride along so FEEL
+ * inside a decision can invoke them as `services.<name>`.
  * Evaluation logs are forwarded to onDmnLog as `{ scope, level, message }`.
  */
-async function dmnDecisionServices(dmnSources, onDmnLog) {
-  const Logger = onDmnLog && function Logger(scope) {
-    const forward = (level) => (...args) => {
-      onDmnLog({ scope, level, message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') });
-    };
-    return { debug: forward('debug'), warn: forward('warn'), error: forward('error') };
-  };
+async function dmnDecisionServices(dmnSources, onDmnLog, services) {
+  const Logger = onDmnLog && forwardingLogger(onDmnLog);
 
-  const services = {};
+  const decisionServices = {};
   for (const source of dmnSources) {
     const rootElement = await parseDmn(source);
-    const definition = new DmnDefinition(new DmnContext(rootElement, new DmnEnvironment({ Logger })));
-    for (const { id } of dmnDecisions(rootElement)) {
-      services[id] = function evaluateDecision(executionMessage, callback) {
+    const definition = new DmnDefinition(new DmnContext(rootElement, new DmnEnvironment({ Logger, services })));
+    for (const { id } of listDecisions(rootElement)) {
+      decisionServices[id] = function evaluateDecision(executionMessage, callback) {
         const input = { ...this?.environment?.variables, ...executionMessage?.content?.input };
         onDmnLog?.({ scope: 'dmn:decision', level: 'debug', message: `<${id}> input ${JSON.stringify(input, null, 1).replace(/\n\s*/g, ' ')}` });
         definition.evaluate(id, input, callback);
       };
     }
   }
-  return services;
+  return decisionServices;
 }
 
 /**
@@ -200,11 +167,10 @@ export async function createDefinition(source, options = {}) {
   const { variables, onServiceCall, step, dmn, onDmnLog, onWarning } = options;
   const takeOnce = makeTakeHelper(1);
   const takeTwice = makeTakeHelper(2);
+  const userServices = { takeOnce, takeTwice, ...options.services };
   const services = {
-    takeOnce,
-    takeTwice,
-    ...(dmn?.length ? await dmnDecisionServices(dmn, onDmnLog) : undefined),
-    ...options.services,
+    ...(dmn?.length ? await dmnDecisionServices(dmn, onDmnLog, userServices) : undefined),
+    ...userServices,
   };
 
   const moddleContext = await createModdle(String(source)).fromXML(String(source));

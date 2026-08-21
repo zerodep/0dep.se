@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.0 - 2026-08-21
+
+- new `/dmn/` page: evaluate DMN decisions entirely in the browser — paste or drop a `.dmn`, pick a decision (decision services included), evaluate with JSON input data, powered by dmn-elements
+- decision tables rendered as plain HTML (no dmn-js): hit policy in the caption, matched rules highlighted after evaluation, literal expressions shown verbatim
+- evaluation trace via `Definition#trace` — evaluated elements in completion order with decision logic, hit policy, matched rule ids, and per-element results — plus the forwarded engine log
+- best-effort input form for the selected decision, above the rendered tables: declared `inputData` (walked transitively through the requirement graph, bound input decisions for decision services) renders as typed fields — number/text inputs, true/false select for booleans — filled fields win over the JSON input data, empty ones fall back to it; Evaluate submits the form (Enter in a field works), and with nothing declared it plainly evaluates
+- two demo services registered for FEEL: `services.takeOnce("key")` grants true once per evaluation (fresh per run), `services.exchangeRate("USD")` serves async-loaded rates through a sync accessor — service functions themselves must be synchronous, a promise-returning one fails loudly
+- `/run/` business rule tasks: the environment's services now ride into dmn-elements, so decisions called by `zeebe:calledDecision` can invoke `services.<name>` in FEEL
+- dropped DMN files on `/run/` also list decision services, and both runner pages cross-link; home nav and the dmn-elements card link to `/dmn/` ("Try it live"); `/dmn/` listed in the sitemap
+- offline support via its own service worker (`dmn-` cache, kept apart from the `run-` cache); same-origin CSP without `unsafe-inline`
+- internal: `src/runner/app.js` renamed to `bpmn-app.js` (public URL `/run/app.js` unchanged), shared `dmn-runner.js` and `take-helper.js` modules, `test/app-ui.test.js` renamed to `bpmn-ui.test.js`
+
 ## v1.0.0 - 2026-08-21
 
 - new `/run/` page: execute BPMN 2.0 diagrams entirely in the browser — paste or drop, powered by bpmn-elements with @0dep/bpmn-extensions (FEEL, zeebe extension elements)

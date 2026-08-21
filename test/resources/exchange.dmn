@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    id="ExchangeDefinitions" name="Exchange" namespace="https://example.com/dmn/exchange">
+  <inputData id="amountInput" name="Amount">
+    <variable id="amountVariable" name="amount" typeRef="number" />
+  </inputData>
+  <inputData id="currencyInput" name="Currency">
+    <variable id="currencyVariable" name="currency" typeRef="string" />
+  </inputData>
+  <decision id="convertedAmount" name="Converted amount">
+    <variable id="convertedAmountVariable" name="convertedAmount" typeRef="number" />
+    <informationRequirement id="convertedAmountReqAmount">
+      <requiredInput href="#amountInput" />
+    </informationRequirement>
+    <informationRequirement id="convertedAmountReqCurrency">
+      <requiredInput href="#currencyInput" />
+    </informationRequirement>
+    <literalExpression id="convertedAmountExpression">
+      <text>amount * services.exchangeRate(currency)</text>
+    </literalExpression>
+  </decision>
+</definitions>

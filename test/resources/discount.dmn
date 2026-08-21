@@ -3,8 +3,14 @@
     xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
     xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
     id="DiscountDefinitions" name="Discounts" namespace="https://example.com/dmn/discount">
+  <inputData id="totalInputData" name="Order total">
+    <variable id="totalInputVariable" name="total" typeRef="number" />
+  </inputData>
   <decision id="discount" name="Discount">
     <variable id="discountVariable" name="discount" typeRef="number" />
+    <informationRequirement id="discountReqTotal">
+      <requiredInput href="#totalInputData" />
+    </informationRequirement>
     <decisionTable id="discountTable" hitPolicy="UNIQUE">
       <input id="totalInput" label="Order total">
         <inputExpression id="totalInputExpression" typeRef="number"><text>total</text></inputExpression>

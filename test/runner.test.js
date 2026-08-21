@@ -706,6 +706,40 @@ test('DMN evaluation logs are forwarded through onDmnLog', async () => {
   );
 });
 
+test('business rule task decisions can invoke registered services', async () => {
+  const serviceDmn = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="feeDefinitions" name="Fees" namespace="https://example.com/dmn/fee">
+  <decision id="fee" name="Fee">
+    <variable id="feeVariable" name="fee" typeRef="number" />
+    <literalExpression id="feeExpression"><text>services.rate(total) * total</text></literalExpression>
+  </decision>
+</definitions>`;
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Def_fee" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="fees" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="to-fee" sourceRef="start" targetRef="charge" />
+    <businessRuleTask id="charge">
+      <extensionElements>
+        <zeebe:calledDecision decisionId="fee" resultVariable="fee" />
+        <zeebe:ioMapping>
+          <zeebe:output source="= fee" target="fee" />
+        </zeebe:ioMapping>
+      </extensionElements>
+    </businessRuleTask>
+    <sequenceFlow id="to-end" sourceRef="charge" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  const { output } = await runBpmn(source, {
+    dmn: [serviceDmn],
+    variables: { total: 200 },
+    services: { rate: (total) => (total >= 100 ? 0.1 : 0.05) },
+  });
+  assert.deepEqual(output, { fee: 20 });
+});
+
 test('resource diagrams: pricing.bpmn calls discount.dmn via zeebe extensions, both displayable', async () => {
   const bpmn = await readFile(join(resources, 'pricing.bpmn'), 'utf8');
   const dmn = await readFile(join(resources, 'discount.dmn'), 'utf8');

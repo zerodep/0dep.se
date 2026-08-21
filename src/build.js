@@ -178,6 +178,9 @@ function renderProject(p) {
     const npmUrl = `https://www.npmjs.com/package/${p.npm}`;
     links.push(`<a href="${escape(npmUrl)}" rel="noopener">npm</a>`);
   }
+  if (p.link) {
+    links.push(`<a href="${escape(p.link.href)}">${escape(p.link.label)}</a>`);
+  }
   const tags = p.tags.map((t) => `<li>${escape(t)}</li>`).join('');
   return `      <article class="project" id="${escape(p.slug)}">
         <header>
@@ -209,7 +212,7 @@ function renderHome(manifest) {
   const groupNav = groups
     .map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`)
     .join(' &middot; ');
-  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/about/">About</a>`;
+  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
 
   return `<!doctype html>
@@ -420,7 +423,7 @@ ${head({
     <section class="run-dmn" data-dmn-dropzone aria-label="Decisions">
       <h2>Decisions</h2>
       <ul id="dmn-list"></ul>
-      <p class="hint">Drop <code>.dmn</code> files here &mdash; business rule tasks call their decisions by decision id (<code>zeebe:calledDecision</code>), executed with <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>.</p>
+      <p class="hint">Drop <code>.dmn</code> files here &mdash; business rule tasks call their decisions by decision id (<code>zeebe:calledDecision</code>), executed with <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>. Just the decisions? <a href="/dmn/">Evaluate DMN standalone</a>.</p>
     </section>
     <section class="run-input" data-dropzone>
       <label for="source">BPMN 2.0 XML &mdash; paste it, or drop a <code>.bpmn</code> file on this panel</label>
@@ -446,12 +449,157 @@ ${ldBlocks}
 `;
 }
 
+const dmnFaq = [
+  {
+    q: 'Is any data transmitted when I evaluate a decision?',
+    a: 'No data is transmitted. This is a static page and the decision engine runs entirely in your browser — DMN files and input data never leave your machine. The page makes no network requests with your content, and its Content-Security-Policy blocks requests to any other origin. The site is open source, so you can verify this in the code.',
+  },
+  {
+    q: 'Does it work offline?',
+    a: 'Yes. After your first visit a service worker caches the page and the engine, so you can evaluate DMN decisions entirely offline — which is also an easy way to see for yourself that nothing is transmitted.',
+  },
+  {
+    q: 'Which DMN constructs are supported?',
+    a: 'DMN 1.3 decision tables and literal expressions, all boxed expressions including the DMN 1.4 additions (conditional, filter, for, some, every), decision services, business knowledge models, item definitions, and multi-model imports. FEEL expressions and unary tests are evaluated with feelin. The engine passes DMN TCK compliance level 2 in full.',
+  },
+  {
+    q: 'What engine powers the evaluator?',
+    a: 'dmn-elements — the same open-source decision engine that backs business rule tasks on the BPMN runner and in the bpmn-engine ecosystem — with the DMN XML parsed by dmn-moddle.',
+  },
+];
+
+function ldDmn(site) {
+  const baseUrl = `https://${site.primaryDomain}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'zerodep DMN runner',
+      url: `${baseUrl}/dmn/`,
+      description: 'Evaluate DMN decisions online — a free in-browser DMN decision engine.',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Any — runs in the web browser',
+      browserRequirements: 'Requires JavaScript',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Evaluate DMN 1.3 decisions client-side',
+        'Decision tables rendered with matched-rule highlighting',
+        'Evaluation trace with hit policy resolution',
+        'FEEL expressions and unary tests via feelin',
+        'DMN 1.4 boxed expressions, decision services, and business knowledge models',
+        'Evaluation log',
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: dmnFaq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    },
+  ];
+}
+
+function renderDmn(site) {
+  const faq = dmnFaq
+    .map(
+      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
+    )
+    .join('\n');
+  const ldBlocks = ldDmn(site).map(jsonLd).join('\n');
+  return `<!doctype html>
+<html lang="en">
+<head>
+${head({
+    site,
+    title: `Evaluate DMN decisions online — browser DMN decision engine — ${site.title}`,
+    description:
+      'Free online DMN evaluator: paste or drop a DMN file and evaluate decisions in your browser — decision tables with matched-rule highlighting, evaluation trace, FEEL expressions. No upload, no account. Powered by dmn-elements.',
+    keywords:
+      'evaluate dmn online, dmn decision table online, run dmn online, dmn simulator, test dmn decision, dmn 1.3, dmn 1.4, decision table hit policy, browser dmn engine, feel expressions, dmn-elements, bpmn-engine',
+    path: '/dmn/',
+    // everything is self-hosted, and unlike /run/ nothing injects inline styles
+    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+  })}
+</head>
+<body>
+  <header class="site-header run-header">
+    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    <h1>Evaluate a DMN decision</h1>
+    <p class="tagline">Paste or drop a DMN file and evaluate decisions right here in the browser &mdash; powered by <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>, parsed with <a href="https://github.com/bpmn-io/dmn-moddle" rel="noopener">dmn-moddle</a>. Whole diagrams? <a href="/run/">Run BPMN</a>.</p>
+  </header>
+  <main class="run">
+    <section class="run-canvas dmn-view" aria-label="Decisions">
+      <form id="input-form">
+        <div class="run-toolbar">
+          <p class="run-actions">
+            <button id="evaluate" type="submit">Evaluate</button>
+            <button id="example" type="button" class="secondary">Load example</button>
+          </p>
+          <p class="run-options">
+            <label>Decision
+              <select id="decision"></select>
+            </label>
+          </p>
+        </div>
+        <fieldset id="declared-inputs" hidden>
+          <legend id="declared-inputs-legend">Inputs</legend>
+          <p class="hint">The selected decision declares these inputs &mdash; filled fields win over the input data JSON, empty ones fall back to it.</p>
+          <div id="input-fields"></div>
+        </fieldset>
+      </form>
+      <div id="tables"></div>
+      <p id="tables-note" class="hint">Load DMN to see its decision tables here. After an evaluation the matched rules light up.</p>
+      <div id="result-block" hidden>
+        <h2>Result</h2>
+        <pre id="result"></pre>
+      </div>
+      <details class="run-log" id="trace-details" hidden>
+        <summary>Evaluation trace</summary>
+        <table id="trace">
+          <thead>
+            <tr><th>Element</th><th>Logic</th><th>Matched rules</th><th>Result</th></tr>
+          </thead>
+          <tbody id="trace-body"></tbody>
+        </table>
+      </details>
+      <details class="run-log" id="log-details">
+        <summary>Evaluation log</summary>
+        <ul id="log"></ul>
+      </details>
+    </section>
+    <section class="run-input" data-dropzone>
+      <label for="source">DMN XML &mdash; paste it, or drop a <code>.dmn</code> file on this panel</label>
+      <textarea id="source" spellcheck="false" placeholder="&lt;definitions xmlns=&quot;https://www.omg.org/spec/DMN/20191111/MODEL/&quot; ...&gt;"></textarea>
+      <label for="input-data">Input data (JSON)</label>
+      <textarea id="input-data" class="variables" spellcheck="false" placeholder='{ "total": 250 }'></textarea>
+      <p class="hint">The selected decision evaluates with the JSON above as input data &mdash; required decisions are walked bottom-up, and every evaluated element lands in the trace with its matched rules and result. Two demo services are registered for FEEL to call: <code>services.takeOnce("key")</code> returns true once per evaluation, and <code>services.exchangeRate("USD")</code> reads rates loaded asynchronously beside the run &mdash; service functions themselves must be synchronous.</p>
+    </section>
+    <section class="run-about">
+      <h2>A free online DMN engine, in your browser</h2>
+      <p>This page evaluates DMN decisions entirely client-side: paste XML straight from your modeler or drop a <code>.dmn</code> file, pick a decision, and evaluate it with your input data &mdash; matched decision table rules light up and the trace shows how the result came to be. Your decisions never leave the browser, and after the first visit the page works offline.</p>
+      <dl class="faq">
+${faq}
+      </dl>
+      <p class="source">Don&rsquo;t take our word for it &mdash; the whole site is open source: <a href="${escape(site.sourceRepo)}" rel="noopener">${escape(site.sourceRepo.replace('https://', ''))}</a>.</p>
+    </section>
+  </main>
+${footer(site)}
+${ldBlocks}
+  <script type="module" src="/dmn/app.js"></script>
+</body>
+</html>
+`;
+}
+
 /**
  * Cache-first service worker so /run/ works offline. The cache name carries a
  * content hash — a new deploy installs a fresh cache and drops the old one.
  */
-function renderServiceWorker(assets, version) {
-  return `const CACHE = 'run-${version}';
+function renderServiceWorker(assets, version, prefix = 'run') {
+  return `const CACHE = '${prefix}-${version}';
 const ASSETS = ${JSON.stringify(assets, null, 1)};
 
 self.addEventListener('install', (e) => {
@@ -461,7 +609,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key.startsWith('run-')).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key.startsWith('${prefix}-')).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -527,6 +675,12 @@ function sitemapXml(site) {
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>${base}/dmn/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>${base}/about/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -543,12 +697,14 @@ export async function build() {
   await mkdir(distDir, { recursive: true });
   await mkdir(join(distDir, 'about'), { recursive: true });
   await mkdir(join(distDir, 'run'), { recursive: true });
+  await mkdir(join(distDir, 'dmn'), { recursive: true });
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
   await writeFile(join(distDir, 'run', 'index.html'), renderRun(manifest.site));
   await bundleJs({
-    entryPoints: [join(root, 'src', 'runner', 'app.js')],
+    // out: 'app' keeps the public URL /run/app.js despite the entry file's name
+    entryPoints: [{ in: join(root, 'src', 'runner', 'bpmn-app.js'), out: 'app' }],
     outdir: join(distDir, 'run'),
     bundle: true,
     splitting: true,
@@ -588,6 +744,35 @@ export async function build() {
     ])),
   ).toString(16);
   await writeFile(join(distDir, 'run', 'sw.js'), renderServiceWorker(runAssets, swVersion));
+
+  // the /dmn/ evaluator page — same treatment, its own bundle and offline cache
+  await writeFile(join(distDir, 'dmn', 'index.html'), renderDmn(manifest.site));
+  await bundleJs({
+    entryPoints: [join(root, 'src', 'runner', 'dmn-app.js')],
+    outfile: join(distDir, 'dmn', 'app.js'),
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    minify: true,
+    logLevel: 'silent',
+  });
+  await copyFile(join(root, 'test', 'resources', 'discount.dmn'), join(distDir, 'dmn', 'discount.dmn'));
+  const dmnAssets = [
+    '/dmn/',
+    '/dmn/index.html',
+    '/dmn/app.js',
+    '/dmn/discount.dmn',
+    '/styles.css',
+    '/favicon-32.png',
+    '/favicon-192.png',
+  ];
+  const dmnSwVersion = crc32(
+    Buffer.concat(await Promise.all([
+      readFile(join(distDir, 'dmn', 'app.js')),
+      readFile(join(distDir, 'dmn', 'index.html')),
+    ])),
+  ).toString(16);
+  await writeFile(join(distDir, 'dmn', 'sw.js'), renderServiceWorker(dmnAssets, dmnSwVersion, 'dmn'));
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    id="TakeOnceDefinitions" name="TakeOnce" namespace="https://example.com/dmn/take-once">
+  <decision id="firstGrant" name="First grant">
+    <variable id="firstGrantVariable" name="firstGrant" typeRef="number" />
+    <literalExpression id="firstGrantExpression">
+      <text>if services.takeOnce("grant") then amount else 0</text>
+    </literalExpression>
+  </decision>
+  <decision id="secondGrant" name="Second grant">
+    <variable id="secondGrantVariable" name="secondGrant" typeRef="number" />
+    <literalExpression id="secondGrantExpression">
+      <text>if services.takeOnce("grant") then amount else 0</text>
+    </literalExpression>
+  </decision>
+  <decision id="grantTotal" name="Grant total">
+    <variable id="grantTotalVariable" name="grantTotal" typeRef="number" />
+    <informationRequirement id="grantTotalReqFirst">
+      <requiredDecision href="#firstGrant" />
+    </informationRequirement>
+    <informationRequirement id="grantTotalReqSecond">
+      <requiredDecision href="#secondGrant" />
+    </informationRequirement>
+    <literalExpression id="grantTotalExpression">
+      <text>firstGrant + secondGrant</text>
+    </literalExpression>
+  </decision>
+</definitions>
