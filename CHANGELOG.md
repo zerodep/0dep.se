@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.0 - 2026-08-29
+
+- dependencies: @0dep/bpmn-extensions 0.0.5, zeebe-bpmn-moddle 2.0, camunda-bpmn-moddle 8.0
+- `/run/`: @0dep/bpmn-extensions 0.0.5 no longer attaches to elements without zeebe extension data, which dropped the completion payload of plain user tasks — the runner now sets bpmn-elements' `assignOutput: 'auto'` so signaled JSON payloads still land in the run output
+- requires bpmn-elements >= 18.0.22 (`assignOutput` setting, `rc` dist-tag)
+
 ## v1.2.0 - 2026-08-21
 
 - the `/dmn/` decision picker preselects the DRG's output decision (the one no other decision requires), so evaluating a chained model exercises the whole graph by default

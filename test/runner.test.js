@@ -104,6 +104,16 @@ test('waiting activities surface a wait event with a signalable api', async () =
   assert.equal(output.approved, true);
 });
 
+test('a non-object signal payload is surfaced keyed by the activity id (assignOutput auto)', async () => {
+  const { output } = await runBpmn(USER_TASK_SOURCE, {
+    onEvent(e) {
+      if (e.event === 'activity.wait') e.api.signal('yes');
+    },
+  });
+
+  assert.equal(output.approve, 'yes');
+});
+
 const CAMUNDA7_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Def_c7" targetNamespace="http://bpmn.io/schema/bpmn">
   <process id="legacy" isExecutable="true" camunda:historyTimeToLive="30">

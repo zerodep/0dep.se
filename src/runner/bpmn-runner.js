@@ -184,7 +184,10 @@ export async function createDefinition(source, options = {}) {
   if (onWarning) warnLiteralConditions(context, onWarning);
 
   const definition = new elements.Definition(context, {
-    settings: { enableDummyService: true, step: Boolean(step) },
+    // @0dep/bpmn-extensions skips elements without zeebe extension data, so a
+    // plain user task signaled with a JSON payload would otherwise drop it —
+    // `assignOutput: 'auto'` lets bpmn-elements merge such output itself
+    settings: { enableDummyService: true, step: Boolean(step), assignOutput: 'auto' },
     expressions: hybridExpressions(),
     scripts: passThroughScripts(),
     extensions: { flowExtensions: extensions },
