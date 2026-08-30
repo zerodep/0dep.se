@@ -54,7 +54,11 @@
             "duration",
             "interval",
             "parser"
-          ]
+          ],
+          "link": {
+            "href": "/tools/#iso",
+            "label": "Try it — parse ISO 8601 in the browser"
+          }
         },
         {
           "slug": "pino-applicationinsights",
@@ -80,7 +84,11 @@
             "invoice",
             "luhn",
             "validator"
-          ]
+          ],
+          "link": {
+            "href": "/tools/#ocr",
+            "label": "Try it — validate or generate an OCR reference"
+          }
         },
         {
           "slug": "texample",

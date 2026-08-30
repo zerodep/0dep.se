@@ -212,7 +212,7 @@ function renderHome(manifest) {
   const groupNav = groups
     .map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`)
     .join(' &middot; ');
-  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/about/">About</a>`;
+  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/tools/">Tools</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
 
   return `<!doctype html>
@@ -596,6 +596,160 @@ ${ldBlocks}
 `;
 }
 
+const toolsFaq = [
+  {
+    q: 'Is any data transmitted when I parse or validate something?',
+    a: 'No data is transmitted. This is a static page and both libraries run entirely in your browser — the strings you test never leave your machine. The page makes no network requests with your content, and its Content-Security-Policy blocks requests to any other origin. The site is open source, so you can verify this in the code.',
+  },
+  {
+    q: 'Where is my history stored?',
+    a: 'In your browser’s localStorage, on this device only. Nothing is synced or uploaded — clear it with the button on the page or by clearing site data. The last 50 distinct attempts are kept.',
+  },
+  {
+    q: 'Which ISO 8601 forms are supported?',
+    a: 'Dates including week dates and ordinal dates, basic and extended notation, fractional seconds and time zone offsets; durations with the designators P, Y, M, W, D, T, H, M and S including fractions on the smallest unit and a leading minus; and intervals with start/end, start/duration, duration/end and repeat prefixes such as R5/P1Y/2025-05-01T13:00:00Z.',
+  },
+  {
+    q: 'What is a bankgiro OCR reference?',
+    a: 'A Swedish invoice number validated with modulus 10 (Luhn). Bankgirot accepts four variants — soft, hard, variable length with a length control digit, and fixed length agreed with the bank. The generator builds a reference from any string, keeping its digits and appending the length control and check digits; the validator reports how the reference fares under each variant.',
+  },
+  {
+    q: 'What libraries power the page?',
+    a: '@0dep/piso parses the ISO 8601 dates, durations and intervals — it is the same parser used by bpmn-elements for timer events — and ocrgenerator validates and generates the OCR references. Both are zero-dependency packages from the zerodep org on npm.',
+  },
+];
+
+function ldTools(site) {
+  const baseUrl = `https://${site.primaryDomain}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'zerodep toolbox — ISO 8601 parser and bankgiro OCR generator',
+      url: `${baseUrl}/tools/`,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Any',
+      browserRequirements: 'Requires JavaScript',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Parse ISO 8601 dates, durations and intervals with @0dep/piso',
+        'Validate and generate Swedish bankgiro OCR references with ocrgenerator',
+        'Local browser history of previous attempts',
+        'Works offline after the first visit',
+      ],
+      author: { '@type': 'Person', name: site.author ?? 'Pål Edman' },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: toolsFaq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    },
+  ];
+}
+
+function renderTools(site) {
+  const faq = toolsFaq
+    .map(
+      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
+    )
+    .join('\n');
+  const ldBlocks = ldTools(site).map(jsonLd).join('\n');
+  return `<!doctype html>
+<html lang="en">
+<head>
+${head({
+    site,
+    title: `ISO 8601 parser & bankgiro OCR generator online — ${site.title}`,
+    description:
+      'Free online toolbox: parse and test ISO 8601 dates, durations and intervals, and validate or generate Swedish bankgiro OCR references (modulus 10) — right in your browser, with a local history of your attempts. No upload, no account. Powered by @0dep/piso and ocrgenerator.',
+    keywords:
+      'iso 8601 parser, iso 8601 duration, iso 8601 interval, iso 8601 date, parse iso 8601 online, iso 8601 repeating interval, iso week date, timer cycle bpmn, ocr generator, ocr referensnummer, bankgiro ocr, ocr validator, modulus 10, luhn, ocr kontrollsiffra, längdkontroll, swedish invoice number, @0dep/piso, ocrgenerator',
+    path: '/tools/',
+    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+  })}
+</head>
+<body>
+  <header class="site-header run-header">
+    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    <h1>ISO 8601 &amp; bankgiro OCR toolbox</h1>
+    <p class="tagline">Test ISO 8601 dates, durations and intervals with <a href="https://github.com/zerodep/piso" rel="noopener">@0dep/piso</a>, and validate or generate Swedish bankgiro OCR references with <a href="https://github.com/zerodep/ocrgenerator" rel="noopener">ocrgenerator</a> &mdash; all in your browser, with a local history of what you tried. Looking for the process engines? <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Evaluate DMN</a>.</p>
+  </header>
+  <main class="run tools">
+    <section class="tool" id="iso" aria-labelledby="iso-title">
+      <h2 id="iso-title">ISO 8601</h2>
+      <form id="iso-form">
+        <label for="iso-input">Date, duration or interval</label>
+        <input id="iso-input" name="iso-input" type="text" spellcheck="false" autocomplete="off" placeholder="R5/P1Y/2025-05-01T13:00:00Z" required>
+        <div class="tool-options">
+          <label>Parse as
+            <select id="iso-kind" name="iso-kind">
+              <option value="auto">auto-detect</option>
+              <option value="interval">interval</option>
+              <option value="duration">duration</option>
+              <option value="date">date</option>
+            </select>
+          </label>
+          <label><input id="iso-utc" name="iso-utc" type="checkbox"> Enforce UTC when no offset is given</label>
+          <button type="submit">Parse</button>
+        </div>
+      </form>
+      <p class="hint">Try <code>2024-W09-4</code>, <code>2024-060T08:06:30+02:00</code>, <code>-P1D</code>, <code>P1Y2M3W4DT5H6M7S</code>, <code>2007-03-01/2007-04-01</code>, <code>R-1/2009-07-01T00:00Z/P1M</code>. Zone-less input is local time unless UTC is enforced &mdash; the same rule bpmn-elements applies to timer cycles.</p>
+      <div id="iso-result" class="tool-result" hidden></div>
+    </section>
+
+    <section class="tool" id="ocr" aria-labelledby="ocr-title">
+      <h2 id="ocr-title">Bankgiro OCR reference</h2>
+      <form id="ocr-form">
+        <label for="ocr-input">OCR reference to validate, or anything to generate one from</label>
+        <input id="ocr-input" name="ocr-input" type="text" spellcheck="false" autocomplete="off" placeholder="0072019122420063" required>
+        <div class="tool-options">
+          <span class="radio-group" role="radiogroup" aria-label="Mode">
+            <label><input type="radio" name="ocr-mode" value="validate" checked> Validate</label>
+            <label><input type="radio" name="ocr-mode" value="generate"> Generate</label>
+          </span>
+          <label>Fixed length <input id="ocr-fixed" name="ocr-fixed" type="number" min="2" max="25" inputmode="numeric" placeholder="–"></label>
+          <label>or <input id="ocr-fixed2" name="ocr-fixed2" type="number" min="2" max="25" inputmode="numeric" placeholder="–"></label>
+          <label>Min <input id="ocr-min" name="ocr-min" type="number" min="2" max="25" inputmode="numeric" placeholder="2"></label>
+          <label>Max <input id="ocr-max" name="ocr-max" type="number" min="2" max="25" inputmode="numeric" placeholder="25"></label>
+          <button type="submit">Run</button>
+        </div>
+      </form>
+      <p class="hint">Validation reports the modulus 10 outcome under the soft, hard and variable-length algorithms, plus fixed length when one or two agreed lengths are given. Generation keeps the digits of the input &mdash; e.g. <code>Customer007:Date2019-12-24:Amount$200</code> &mdash; and appends the length control and check digits; a fixed length pads with zeros or caps from the left. Bankgirot accepts 2&ndash;25 digits, plusgirot 5&ndash;15.</p>
+      <div id="ocr-result" class="tool-result" hidden></div>
+    </section>
+
+    <section class="tool" id="history" aria-labelledby="history-title">
+      <div class="tool-heading">
+        <h2 id="history-title">History</h2>
+        <button id="history-clear" type="button" class="secondary" disabled>Clear history</button>
+      </div>
+      <p class="hint">Your previous attempts, kept in this browser&rsquo;s local storage only &mdash; click one to restore its input and options and run it again.</p>
+      <p id="history-empty" class="hint">Nothing yet &mdash; parse a date or check an OCR reference and it shows up here.</p>
+      <ol id="history-list"></ol>
+    </section>
+
+    <section class="run-about">
+      <h2>Two small zero-dependency libraries, in your browser</h2>
+      <p>This page is a playground for two of the zerodep packages. <a href="https://github.com/zerodep/piso" rel="noopener">@0dep/piso</a> parses ISO 8601 as declared on Wikipedia &mdash; calendar, week and ordinal dates, durations with a leading minus, and repeating intervals &mdash; and reports what the string means: its components, the next start and expiry relative to now, week number and epoch. <a href="https://github.com/zerodep/ocrgenerator" rel="noopener">ocrgenerator</a> validates Swedish bankgiro OCR references against all four modulus 10 algorithms and generates one from any string. Everything you type never leaves the browser; your attempts are kept in local storage so you can revisit them, and after the first visit the page works offline.</p>
+      <dl class="faq">
+${faq}
+      </dl>
+      <p class="source">Don&rsquo;t take our word for it &mdash; the whole site is open source: <a href="${escape(site.sourceRepo)}" rel="noopener">${escape(site.sourceRepo.replace('https://', ''))}</a>.</p>
+    </section>
+  </main>
+${footer(site)}
+${ldBlocks}
+  <script type="module" src="/tools/app.js"></script>
+</body>
+</html>
+`;
+}
+
 /**
  * Cache-first service worker so /run/ works offline. The cache name carries a
  * content hash — a new deploy installs a fresh cache and drops the old one.
@@ -672,6 +826,7 @@ function llmsTxt(manifest) {
 
 - [Run BPMN online](${base}/run/): execute BPMN 2.0 diagrams entirely in the browser — FEEL expressions, zeebe and camunda 7 extensions, DMN decision tables via business rule tasks. Nothing is uploaded.
 - [Evaluate DMN online](${base}/dmn/): evaluate DMN decisions in the browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace.
+- [ISO 8601 & bankgiro OCR toolbox](${base}/tools/): parse ISO 8601 dates, durations and intervals with @0dep/piso, validate or generate Swedish bankgiro OCR references with ocrgenerator — with a local browser history.
 - [About](${base}/about/): the maintainer behind the packages.
 
 ${groupSections.join('\n\n')}
@@ -710,6 +865,12 @@ function sitemapXml(site) {
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>${base}/tools/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>${base}/about/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -727,6 +888,7 @@ export async function build() {
   await mkdir(join(distDir, 'about'), { recursive: true });
   await mkdir(join(distDir, 'run'), { recursive: true });
   await mkdir(join(distDir, 'dmn'), { recursive: true });
+  await mkdir(join(distDir, 'tools'), { recursive: true });
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
@@ -802,6 +964,32 @@ export async function build() {
     ])),
   ).toString(16);
   await writeFile(join(distDir, 'dmn', 'sw.js'), renderServiceWorker(dmnAssets, dmnSwVersion, 'dmn'));
+  // the /tools/ playground — piso + ocrgenerator, one small bundle, own offline cache
+  await writeFile(join(distDir, 'tools', 'index.html'), renderTools(manifest.site));
+  await bundleJs({
+    entryPoints: [join(root, 'src', 'runner', 'tools-app.js')],
+    outfile: join(distDir, 'tools', 'app.js'),
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    minify: true,
+    logLevel: 'silent',
+  });
+  const toolsAssets = [
+    '/tools/',
+    '/tools/index.html',
+    '/tools/app.js',
+    '/styles.css',
+    '/favicon-32.png',
+    '/favicon-192.png',
+  ];
+  const toolsSwVersion = crc32(
+    Buffer.concat(await Promise.all([
+      readFile(join(distDir, 'tools', 'app.js')),
+      readFile(join(distDir, 'tools', 'index.html')),
+    ])),
+  ).toString(16);
+  await writeFile(join(distDir, 'tools', 'sw.js'), renderServiceWorker(toolsAssets, toolsSwVersion, 'tools'));
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
