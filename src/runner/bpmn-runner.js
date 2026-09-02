@@ -4,11 +4,12 @@ import { parseDmn, listDecisions, forwardingLogger } from './dmn-runner.js';
 import { makeTakeHelper } from './take-helper.js';
 import { Context as DmnContext, Definition as DmnDefinition, Environment as DmnEnvironment } from 'dmn-elements';
 import { Serializer, TypeResolver } from 'moddle-context-serializer';
-import { extensions, extendFn, FeelExpressions, FeelScripts } from '@0dep/bpmn-extensions';
+import { extensions, extendFn, FeelExpressions, FeelScripts, TimerEventDefinition } from '@0dep/bpmn-extensions';
 import zeebeSchema from 'zeebe-bpmn-moddle/resources/zeebe.json' with { type: 'json' };
 import camundaSchema from 'camunda-bpmn-moddle/resources/camunda.json' with { type: 'json' };
 
-const typeResolver = TypeResolver(elements);
+// the extension pack's TimerEventDefinition also takes cron timeCycles (Camunda 8 timer start events)
+const typeResolver = TypeResolver({ ...elements, TimerEventDefinition });
 
 const CAMUNDA7_NS = 'http://camunda.org/schema/1.0/bpmn';
 

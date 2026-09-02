@@ -1,5 +1,7 @@
 # zerodep-web
 
+[![Deploy](https://github.com/zerodep/0dep.se/actions/workflows/pages.yml/badge.svg)](https://github.com/zerodep/0dep.se/actions/workflows/pages.yml)
+
 Source for **[0dep.se](https://0dep.se)**.
 
 Static landing page for the zerodep org's npm packages and the BPMN

@@ -52,7 +52,11 @@ const assetsDir = join(root, 'src', 'assets');
 const staticDir = join(root, 'static');
 const distDir = join(root, 'dist');
 
-const copyAssets = ['logo.png', 'apple-touch-icon.png'];
+const copyAssets = ['logo.png', 'og-image.png', 'logo-mark.png', 'apple-touch-icon.png'];
+const fontFiles = ['jost-latin.woff2', 'ibm-plex-sans-latin.woff2', 'ibm-plex-mono-latin.woff2'];
+// OFL asks that the licence accompany the font files wherever they are distributed
+const fontLicenses = ['LICENSE-jost.txt', 'LICENSE-ibm-plex.txt'];
+const fontAssets = fontFiles.map((f) => `/fonts/${f}`);
 const transparentAssets = ['favicon-32.png', 'favicon-192.png'];
 
 const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -65,7 +69,7 @@ function head({
   path,
   keywords = '',
   ogType = 'website',
-  ogImage = '/logo.png',
+  ogImage = '/og-image.png',
   csp = '',
 }) {
   const baseUrl = `https://${site.primaryDomain}`;
@@ -118,7 +122,7 @@ function ldHome(manifest) {
       '@type': 'Organization',
       name: site.title,
       url: `${baseUrl}/`,
-      logo: `${baseUrl}/logo.png`,
+      logo: `${baseUrl}/og-image.png`,
       sameAs: [site.githubOrg, site.npmScope, site.linkedin].filter(Boolean),
     },
     {
@@ -159,50 +163,73 @@ function ldAbout(profile, site) {
   ];
 }
 
+/** BPMN intermediate event — the double ring, which is also the zerodep mark. */
+const RING_SVG = '<svg class="ring" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+/** Sub-page home link: the ring mark (the logo without its wordmark) plus the back text. */
+function backLink(site) {
+  return `<p class="back"><a href="/"><img class="mark" src="/logo-mark.png" alt="" width="30" height="21"> back to ${escape(site.title)}</a></p>`;
+}
+
 function footer(site) {
   return `  <footer>
     <p>
-      <a href="${escape(site.githubOrg)}" rel="noopener">github.com/zerodep</a>
+      <a href="${escape(site.githubOrg)}" rel="noopener">GitHub</a>
       &middot;
-      <a href="${escape(site.npmScope)}" rel="noopener">npm/~0dep</a>
+      <a href="${escape(site.npmScope)}" rel="noopener">npm</a>
       &middot;
-      <a href="${escape(site.linkedin)}" rel="noopener">linkedin.com/in/pal-edman</a>
+      <a href="${escape(site.linkedin)}" rel="noopener">LinkedIn</a>
     </p>
     <p class="copy">&copy; Pål Edman &middot; MIT licensed</p>
   </footer>`;
 }
 
-function renderProject(p) {
+/**
+ * The dependency eyebrow: the site's promise is zero dependencies, so every card
+ * opens with the real number. Zero renders as the ring mark; anything else says
+ * what the package builds on, linking siblings that are listed on the page.
+ */
+function renderDeps(p, npmToSlug) {
+  const deps = p.runtimeDeps ?? [];
+  if (deps.length === 0) return `<div class="deps zero">${RING_SVG} 0 deps</div>`;
+  const names = deps.map((dep) => {
+    const slug = npmToSlug.get(dep);
+    return slug ? `<a href="#${escape(slug)}">${escape(dep)}</a>` : `<span>${escape(dep)}</span>`;
+  });
+  return `<div class="deps">${deps.length} dep${deps.length === 1 ? '' : 's'} <span class="builds-on">&middot; builds on ${names.join(', ')}</span></div>`;
+}
+
+function renderProject(p, npmToSlug = new Map()) {
   const links = [`<a href="${escape(p.repo)}" rel="noopener">GitHub</a>`];
   if (p.npm) {
     const npmUrl = `https://www.npmjs.com/package/${p.npm}`;
     links.push(`<a href="${escape(npmUrl)}" rel="noopener">npm</a>`);
   }
   if (p.link) {
-    links.push(`<a href="${escape(p.link.href)}">${escape(p.link.label)}</a>`);
+    links.push(`<a href="${escape(p.link.href)}">${escape(p.link.label)} &rarr;</a>`);
   }
   const tags = p.tags.map((t) => `<li>${escape(t)}</li>`).join('');
-  return `      <article class="project" id="${escape(p.slug)}">
+  return `      <article class="project task" id="${escape(p.slug)}">
         <header>
           <h3><a href="${escape(p.repo)}" rel="noopener">${escape(p.name)}</a></h3>
+          ${renderDeps(p, npmToSlug)}
         </header>
         <p>${escape(p.description)}</p>
         <ul class="tags">${tags}</ul>
         <p class="links">${links.join(' &middot; ')}</p>
       </article>`;
 }
-
-function renderGroup(g) {
+function renderGroup(g, npmToSlug) {
   const groupLink = g.link
-    ? `\n        <p class="group-link"><a href="${escape(g.link.href)}">${escape(g.link.label)}</a></p>`
+    ? `\n        <p class="group-link"><a href="${escape(g.link.href)}">${escape(g.link.label)} &rarr;</a></p>`
     : '';
-  return `    <section class="group" id="${escape(g.id)}">
+  return `    <section class="group lane" id="${escape(g.id)}">
       <header class="group-header">
-        <h2>${escape(g.title)}</h2>
+        <h2 class="lane-label">${escape(g.title)}</h2>
         <p>${escape(g.description)}</p>${groupLink}
       </header>
       <div class="projects">
-${g.projects.map(renderProject).join('\n')}
+${g.projects.map((p) => renderProject(p, npmToSlug)).join('\n')}
       </div>
     </section>`;
 }
@@ -214,6 +241,7 @@ function renderHome(manifest) {
     .join(' &middot; ');
   const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/tools/">Tools</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
+  const npmToSlug = new Map(groups.flatMap((g) => g.projects.filter((p) => p.npm).map((p) => [p.npm, p.slug])));
 
   return `<!doctype html>
 <html lang="en">
@@ -229,13 +257,13 @@ ${head({
 </head>
 <body>
   <header class="site-header">
-    <h1><img src="/logo.png" alt="${escape(site.title)}" width="320" height="320"></h1>
+    <h1><img src="/logo.png" alt="${escape(site.title)}" width="320" height="94"></h1>
     <p class="tagline">${escape(site.tagline)}</p>
     <p class="intro">${escape(site.intro)}</p>
     <nav>${navLinks}</nav>
   </header>
-  <main>
-${groups.map(renderGroup).join('\n')}
+  <main class="pool">
+${groups.map((g) => renderGroup(g, npmToSlug)).join('\n')}
   </main>
 ${footer(site)}
 ${ldBlocks}
@@ -270,7 +298,7 @@ ${head({
 </head>
 <body>
   <header class="site-header profile-header">
-    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    ${backLink(site)}
     ${profile.avatar ? `<img class="avatar" src="${escape(profile.avatar)}" alt="${escape(profile.name)}" width="200" height="200">` : ''}
     <h1>${escape(profile.name)}</h1>
     <p class="tagline">${escape(profile.headline)}</p>
@@ -373,7 +401,7 @@ ${head({
 </head>
 <body>
   <header class="site-header run-header">
-    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    ${backLink(site)}
     <h1>Run a BPMN diagram</h1>
     <p class="tagline">Paste or drop BPMN 2.0 XML and execute it right here in the browser &mdash; <a href="https://github.com/paed01/bpmn-elements" rel="noopener">bpmn-elements</a> wired with <a href="https://github.com/zerodep/bpmn-extensions" rel="noopener">@0dep/bpmn-extensions</a>, drawn with <a href="https://github.com/bpmn-io/bpmn-js" rel="noopener">bpmn-js</a>.</p>
   </header>
@@ -528,7 +556,7 @@ ${head({
 </head>
 <body>
   <header class="site-header run-header">
-    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    ${backLink(site)}
     <h1>Evaluate a DMN decision</h1>
     <p class="tagline">Paste or drop a DMN file and evaluate decisions right here in the browser &mdash; powered by <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>, parsed with <a href="https://github.com/bpmn-io/dmn-moddle" rel="noopener">dmn-moddle</a>. Whole diagrams? <a href="/run/">Run BPMN</a>.</p>
   </header>
@@ -675,7 +703,7 @@ ${head({
 </head>
 <body>
   <header class="site-header run-header">
-    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    ${backLink(site)}
     <h1>ISO 8601 &amp; bankgiro OCR toolbox</h1>
     <p class="tagline">Test ISO 8601 dates, durations and intervals with <a href="https://github.com/zerodep/piso" rel="noopener">@0dep/piso</a>, and validate or generate Swedish bankgiro OCR references with <a href="https://github.com/zerodep/ocrgenerator" rel="noopener">ocrgenerator</a> &mdash; all in your browser, with a local history of what you tried. Looking for the process engines? <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Evaluate DMN</a>.</p>
   </header>
@@ -798,7 +826,7 @@ function render404(site) {
   <header class="site-header notfound">
     <h1>404</h1>
     <p class="tagline">That page doesn&rsquo;t exist.</p>
-    <p class="back"><a href="/">&larr; back to ${escape(site.title)}</a></p>
+    ${backLink(site)}
   </header>
 </body>
 </html>
@@ -916,6 +944,7 @@ export async function build() {
   // offline support: precache everything /run/ needs, versioned by content
   const chunkFiles = (await readdir(join(distDir, 'run', 'chunks'))).filter((f) => f.endsWith('.js'));
   const runAssets = [
+    ...fontAssets,
     '/run/',
     '/run/index.html',
     '/run/app.js',
@@ -949,6 +978,7 @@ export async function build() {
   });
   await copyFile(join(root, 'test', 'resources', 'discount.dmn'), join(distDir, 'dmn', 'discount.dmn'));
   const dmnAssets = [
+    ...fontAssets,
     '/dmn/',
     '/dmn/index.html',
     '/dmn/app.js',
@@ -976,6 +1006,7 @@ export async function build() {
     logLevel: 'silent',
   });
   const toolsAssets = [
+    ...fontAssets,
     '/tools/',
     '/tools/index.html',
     '/tools/app.js',
@@ -994,6 +1025,10 @@ export async function build() {
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
     await copyFile(join(assetsDir, f), join(distDir, f));
+  }
+  await mkdir(join(distDir, 'fonts'), { recursive: true });
+  for (const f of [...fontFiles, ...fontLicenses]) {
+    await copyFile(join(assetsDir, 'fonts', f), join(distDir, 'fonts', f));
   }
   if (profile.avatar) {
     const file = profile.avatar.replace(/^\//, '');

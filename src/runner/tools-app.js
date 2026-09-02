@@ -99,7 +99,7 @@ function runIso(input, options) {
         case 'interval':
           row(dl, 'Normalized', code(result.normalized));
           row(dl, 'Components', `${result.flags.join(' + ')} (type ${result.type})`);
-          row(dl, 'Repeat', result.repeat);
+          row(dl, 'Repeat', result.repeatText);
           row(dl, 'Start', result.start && code(result.start));
           row(dl, 'Duration', result.duration && code(result.duration));
           row(dl, 'End', result.end && code(result.end));

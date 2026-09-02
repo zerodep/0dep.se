@@ -25,6 +25,17 @@ describe('evaluateIso', () => {
     assert.equal(r.startAt, undefined, 'a duration has no absolute start without a reference');
       });
 
+  test('unbounded repeats read as forever, or until the end date', () => {
+    const forever = evaluateIso('R-1/2009-07-01T00:00Z/P1M');
+    assert.equal(forever.repeat, -1);
+    assert.equal(forever.repeatText, 'forever');
+    const untilEnd = evaluateIso('R-1/P1M/2024-07-27T00:00Z');
+    assert.equal(untilEnd.repeatText, 'until the end date');
+    const counted = evaluateIso('R3/2024-03-01T10:00Z/P1M');
+    assert.equal(counted.repeatText, '3 times');
+    assert.equal(evaluateIso('2007-03-01/2007-04-01').repeatText, undefined, 'no repeat, no text');
+  });
+
   test('negative durations carry their sign', () => {
     const r = evaluateIso('-P1D');
     assert.equal(r.kind, 'duration');

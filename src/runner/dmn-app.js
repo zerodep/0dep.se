@@ -75,6 +75,15 @@ function renderDecisionTable(table) {
     th.textContent = output.label || output.name || '';
     headRow.append(th);
   }
+  // rules can carry more outputEntry cells than declared output columns — pad the
+  // header with unnamed output columns so the grid stays square
+  const declaredOutputs = (table.output || []).length;
+  const maxRuleOutputs = Math.max(0, ...(table.rule || []).map((rule) => (rule.outputEntry || []).length));
+  for (let i = declaredOutputs; i < maxRuleOutputs; i += 1) {
+    const th = document.createElement('th');
+    th.className = 'output';
+    headRow.append(th);
+  }
   thead.append(headRow);
   el.append(thead);
 
@@ -131,6 +140,12 @@ function renderTables(rootElement) {
 
     if (logic?.$type === 'dmn:DecisionTable') {
       figure.append(renderDecisionTable(logic));
+      if (!(logic.output || []).length) {
+        const warning = document.createElement('p');
+        warning.className = 'table-warning';
+        warning.textContent = 'This decision table declares no output column — evaluation will fail.';
+        figure.append(warning);
+      }
     } else if (logic?.$type === 'dmn:LiteralExpression') {
       const pre = document.createElement('pre');
       pre.textContent = logic.text ?? '';

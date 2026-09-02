@@ -1070,3 +1070,30 @@ test('rejects when source has no executable process', async () => {
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_empty" targetNamespace="http://bpmn.io/schema/bpmn" />`;
   await assert.rejects(runBpmn(empty), /process/i);
 });
+
+test('cron timer start events parse through @0dep/bpmn-extensions TimerEventDefinition — needs >= 0.0.6', async () => {
+  const cron = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Def_cron" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="nightly" isExecutable="true">
+    <startEvent id="start">
+      <timerEventDefinition>
+        <timeCycle xsi:type="tFormalExpression">0 1 * * *</timeCycle>
+      </timerEventDefinition>
+    </startEvent>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  const { events } = await runBpmn(cron, {
+    onEvent(e) {
+      if (e.event === 'activity.timer') e.api.cancel();
+    },
+  });
+
+  const timer = events.find((e) => e.event === 'activity.timer');
+  assert.ok(timer, `expected the cron start to wait on a timer, got ${events.map((e) => e.event).join(', ')}`);
+  assert.equal(timer.id, 'start');
+  assert.ok(timer.timeout > 0 && timer.timeout <= 24 * 60 * 60 * 1000, `timeout should be the next cron run, got ${timer.timeout}`);
+  assert.equal(events.at(-1).event, 'definition.leave');
+});

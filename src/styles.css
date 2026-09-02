@@ -1,30 +1,66 @@
+/* Ink on diagram paper. Chromatic color means exactly one thing: live —
+   a running token, a matched rule, a valid reference, a link. */
 :root {
   --max: 64rem;
-  --bg: #fafaf7;
-  --fg: #1a1a1a;
-  --muted: #5a5a5a;
-  --accent: #2a5d50;
+  --paper: #f4f6f5;
+  --grid: #e2e6e4;
+  --ink: #141816;
+  --slate: #5f6b67;
+  --stroke: #aab2ae;
+  --token: #147a5c;
+  --token-fill: #d9efe6;
+
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --muted: var(--slate);
+  --accent: var(--token);
   --accent-fg: #fff;
   --card: #fff;
-  --border: #e5e5e0;
-  --tag-bg: #eef0ec;
-  --tag-fg: #2a5d50;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --border: var(--grid);
+  --tag-bg: var(--token-fill);
+  --tag-fg: var(--token);
+  --shadow: none;
+
+  --font-display: 'Jost', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* Dark mode is the canvas inverted — white strokes on ink, color stays rare. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14171a;
-    --fg: #ececec;
-    --muted: #a0a4a8;
-    --accent: #6fbfa8;
+    --paper: #0f1311;
+    --grid: #242a27;
+    --ink: #e8ebe9;
+    --slate: #98a39e;
+    --stroke: #4d5753;
+    --token: #5fd1a5;
+    --token-fill: #173a2f;
     --accent-fg: #0a0d0f;
-    --card: #1c2025;
-    --border: #2a2f35;
-    --tag-bg: #232a2f;
-    --tag-fg: #6fbfa8;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    --card: #151a17;
   }
+}
+
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 500 600;
+  font-display: swap;
+  src: url(/fonts/jost-latin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url(/fonts/ibm-plex-sans-latin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/ibm-plex-mono-latin.woff2) format('woff2');
 }
 
 * { box-sizing: border-box; }
@@ -35,7 +71,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 16px/1.55 var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -44,7 +80,7 @@ a:hover, a:focus { text-decoration: underline; }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
 code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.92em;
   background: var(--tag-bg);
   color: var(--tag-fg);
@@ -76,15 +112,29 @@ footer {
   width: clamp(12rem, 28vw, 18rem);
   max-width: 100%;
 }
+.site-header h1 { margin-bottom: 1.5rem; }
 @media (prefers-color-scheme: dark) {
   .site-header h1 img { filter: invert(1); }
 }
 
 .tagline {
-  font-size: 1.15rem;
-  margin: 0 0 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 3.6vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
   color: var(--fg);
 }
+.run-header .tagline,
+.profile-header .tagline { font-family: var(--font-body); font-weight: 400; font-size: 1.1rem; line-height: 1.5; letter-spacing: 0; }
+.run-header h1,
+.profile-header h1,
+.group-header h2,
+.run-about h2,
+.tools .tool h2,
+.run-dmn h2,
+.dmn-view #result-block h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
 
 .intro {
   margin: 0 0 1.5rem;
@@ -133,7 +183,7 @@ main { padding-top: 2.5rem; padding-bottom: 3rem; }
 .project header h3 {
   margin: 0;
   font-size: 1.05rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   letter-spacing: -0.01em;
   word-break: break-all;
 }
@@ -188,8 +238,10 @@ footer .copy { margin-top: 1rem; }
   border-radius: 50%;
   object-fit: cover;
   margin: 0 0 1rem;
-  box-shadow: var(--shadow);
-  border: 3px solid var(--card);
+  /* an event-shaped portrait: the cut-out on the card ground, inside an ink ring */
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: none;
 }
 .profile-header h1 {
   font-size: clamp(2rem, 5vw, 2.75rem);
@@ -252,6 +304,11 @@ main.profile {
 /* run page */
 .run-header { padding-top: 2.5rem; }
 .run-header .back { margin: 0 0 1.5rem; font-size: 0.95rem; }
+.back a { display: inline-flex; align-items: center; gap: 0.5rem; }
+.back .mark { display: block; }
+@media (prefers-color-scheme: dark) {
+  .back .mark { filter: invert(1); }
+}
 .run-header h1 { margin: 0 0 0.75rem; line-height: 1.2; }
 
 .run { display: grid; gap: 2rem; padding-bottom: 3rem; }
@@ -272,7 +329,7 @@ main.profile {
   width: 100%;
   min-height: 16rem;
   resize: vertical;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.45;
   color: var(--fg);
@@ -310,7 +367,7 @@ main.profile {
   list-style: none;
   margin: 0;
   padding: 0 1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 .run-log #log li { padding: 0.2rem 0; border-bottom: 1px solid var(--border); }
@@ -350,7 +407,7 @@ main.profile {
 .run-log #stats {
   margin: 0.5rem 1rem 1rem;
   border-collapse: collapse;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 .run-log #stats th,
@@ -397,7 +454,7 @@ main.profile {
 .run-canvas #properties h3 {
   margin: 0 0 0.5rem;
   font-size: 0.9rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 .run-canvas #properties pre {
   margin: 0;
@@ -445,7 +502,7 @@ main.profile {
   display: inline-block;
   min-width: 1.3em;
   text-align: center;
-  font: 600 0.7rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: 600 0.7rem/1.5 var(--font-mono);
   background: var(--accent);
   color: var(--accent-fg);
   border-radius: 999px;
@@ -490,7 +547,7 @@ main.profile {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 .run-dmn #dmn-list:empty { display: none; }
@@ -516,7 +573,7 @@ main.profile {
 .dmn-table figcaption .hit-policy { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
 .dmn-table table {
   border-collapse: collapse;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 .dmn-table th,
@@ -526,7 +583,7 @@ main.profile {
   border: 1px solid var(--border);
   white-space: nowrap;
 }
-.dmn-table th { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.8rem; }
+.dmn-table th { font-family: var(--font-body); font-size: 0.8rem; }
 .dmn-table th.output,
 .dmn-table td.output { border-left-style: double; border-left-width: 3px; }
 .dmn-table td.rule-number { color: var(--muted); }
@@ -538,6 +595,7 @@ main.profile {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.dmn-table .table-warning { margin: 0.6rem 0 0; font-size: 0.85rem; color: #c0392b; }
 .dmn-view #result-block h2 { font-size: 1rem; margin: 1rem 0 0.5rem; }
 .dmn-view #result {
   margin: 0;
@@ -552,7 +610,7 @@ main.profile {
 .run-log #trace {
   margin: 0.5rem 1rem 1rem;
   border-collapse: collapse;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 .run-log #trace th,
@@ -618,7 +676,7 @@ main.profile {
   width: 100%;
   box-sizing: border-box;
   font: inherit;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.95rem;
   color: var(--fg);
   background: var(--bg);
@@ -662,7 +720,7 @@ main.profile {
 .tools .tool-result.invalid { border-color: #c0392b; }
 .tools .tool-result .result-headline { margin: 0; font-weight: 600; }
 .tools .tool-result.invalid .result-headline { color: #c0392b; }
-.tools .tool-result .result-error { margin: 0.35rem 0 0; color: #c0392b; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; }
+.tools .tool-result .result-error { margin: 0.35rem 0 0; color: #c0392b; font-family: var(--font-mono); font-size: 0.85rem; }
 .tools .tool-result dl {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -673,7 +731,7 @@ main.profile {
 .tools .tool-result dt { color: var(--muted); }
 .tools .tool-result dd { margin: 0; word-break: break-word; }
 .tools .tool-result code { font-size: 0.88em; }
-.tools .tool-result .ocr-number { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.15rem; letter-spacing: 0.05em; }
+.tools .tool-result .ocr-number { font-family: var(--font-mono); font-size: 1.15rem; letter-spacing: 0.05em; }
 .tools #history-list { list-style: none; margin: 0.75rem 0 0; padding: 0; }
 .tools #history-list:empty { display: none; }
 .tools #history-list li {
@@ -722,3 +780,32 @@ main.profile {
   cursor: pointer;
 }
 .tools #history-list .history-remove:hover { color: #c0392b; }
+
+/* --- the home page is a pool: groups are lanes, cards are tasks --- */
+.pool { border: 1px solid var(--border); border-radius: 12px; padding: 0; margin-top: 2.5rem; background: var(--card); }
+.pool .lane { margin: 0; padding: 1.5rem 1.5rem 1.75rem; border-top: 1px solid var(--border); }
+.pool .lane:first-child { border-top: 0; }
+.lane .group-header { margin: 0 0 1.25rem; }
+.lane .group-header h2 { font-size: 1.1rem; margin: 0 0 0.35rem; }
+.pool .projects { gap: 1rem; }
+.project.task {
+  background: var(--paper);
+  border: 1px solid var(--stroke);
+  box-shadow: none;
+}
+.project .deps {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--slate);
+  margin-top: 0.4rem;
+}
+.project .deps.zero { color: var(--token); }
+.project .deps .ring { flex: none; }
+.project .deps .builds-on a { color: inherit; text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 2px; }
+.project .deps .builds-on a:hover { color: var(--token); }
+

@@ -23,6 +23,13 @@ const FLAG_NAMES = [
   [8, 'end'],
 ];
 
+/** R-1 declares unbounded repetition — it runs forever, or until the interval's end date. */
+function describeRepeat(repeat, hasEnd) {
+  if (repeat === undefined || repeat === null) return undefined;
+  if (repeat === -1) return hasEnd ? 'until the end date' : 'forever';
+  return `${repeat} times`;
+}
+
 /** Guess what the user pasted: a duration starts with (−)P, an interval has a slash or R-prefix, else a date. */
 export function detectIsoKind(source) {
   const s = source.trim();
@@ -52,6 +59,7 @@ export function evaluateIso(source, { kind = 'auto', enforceUTC = false, now = n
           type: interval.type,
           flags: FLAG_NAMES.filter(([bit]) => (interval.type & bit) === bit).map(([, name]) => name),
           repeat: interval.repeat,
+          repeatText: describeRepeat(interval.repeat, Boolean(interval.endDate)),
           normalized: interval.toJSON(),
           start: interval.startDate ? interval.startDate.toISOString() : undefined,
           end: interval.endDate ? interval.endDate.toISOString() : undefined,

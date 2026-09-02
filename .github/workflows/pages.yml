@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -58,6 +58,7 @@ jobs:
                 "https://0dep.se/",
                 "https://0dep.se/run/",
                 "https://0dep.se/dmn/",
+                "https://0dep.se/tools/",
                 "https://0dep.se/about/"
               ]
             }'

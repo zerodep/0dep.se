@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.5.0 - 2026-09-02
+
+- `/tools/`: an interval's repeat renders as what it means — `R-1` reads as "forever", or "until the end date" when the interval has one; counted repeats as "n times"
+- `/run/` and MCP `run_bpmn`: cron `timeCycle`s (Camunda 8 timer start events, e.g. `0 1 * * *`) parse through @0dep/bpmn-extensions' `TimerEventDefinition`
+- dependencies: @0dep/bpmn-extensions 0.0.6 (+ its peer croner 10)
+- visual identity: the site is drawn in the notation it executes — groups are lanes in a pool, cards are task shapes; `logo.png` is trimmed to the wordmark (the square original ships as `og-image.png` for social cards and JSON-LD); the about-page avatar sits inside an ink ring, downscaled from 646 KB
+- tokens: ink on diagram paper with one live color (the green, for links and running/matched/valid states) and a cool ground instead of warm cream; dark mode is the canvas inverted
+- type: Jost for display, IBM Plex Sans for body, IBM Plex Mono for anything pasteable — self-hosted OFL woff2 latin subsets (77 KB, precached by the runner service workers), same-origin CSP unchanged
+- every card opens with its honest runtime dependency count from the new `runtimeDeps` manifest field (zero renders as the ring mark; otherwise "builds on …" linking sibling cards); a test cross-checks the lists against installed packages
+- card and group links lead with a verb ("Parse ISO 8601 →", "Run a diagram in your browser →"); footer links are named (GitHub · npm · LinkedIn) instead of raw URLs
+- sub pages link home through the ring mark (`logo-mark.png`, the logo without its wordmark) in the back link
+- `/dmn/`: a decision table without a declared output column now renders square (orphan rule output cells get unnamed header columns) with a visible warning that evaluation will fail — previously the grid skewed silently until a DecisionError at evaluate
+
+## v1.4.0 - 2026-08-30
+
+- new `/tools/` page: parse ISO 8601 dates, durations and intervals with @0dep/piso, validate or generate Swedish bankgiro OCR references with ocrgenerator — a browser-local history (localStorage, 50 entries) restores and re-runs previous attempts; own bundle and `tools-` offline cache; piso and ocrgenerator cards link to it
+- dependencies: @0dep/piso 5.1, ocrgenerator 3.0
+
 ## v1.3.0 - 2026-08-29
 
 - dependencies: @0dep/bpmn-extensions 0.0.5, zeebe-bpmn-moddle 2.0, camunda-bpmn-moddle 8.0

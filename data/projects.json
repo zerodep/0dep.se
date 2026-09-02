@@ -29,7 +29,7 @@
       "express middleware",
       "open source"
     ],
-    "ogImage": "/logo.png",
+    "ogImage": "/og-image.png",
     "primaryDomain": "0dep.se",
     "altDomains": [],
     "githubOrg": "https://github.com/zerodep",
@@ -55,9 +55,10 @@
             "interval",
             "parser"
           ],
+          "runtimeDeps": [],
           "link": {
             "href": "/tools/#iso",
-            "label": "Try it — parse ISO 8601 in the browser"
+            "label": "Parse ISO 8601"
           }
         },
         {
@@ -71,7 +72,8 @@
             "pino",
             "azure",
             "telemetry"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "ocrgenerator",
@@ -85,9 +87,10 @@
             "luhn",
             "validator"
           ],
+          "runtimeDeps": [],
           "link": {
             "href": "/tools/#ocr",
-            "label": "Try it — validate or generate an OCR reference"
+            "label": "Check an OCR reference"
           }
         },
         {
@@ -101,7 +104,8 @@
             "testing",
             "markdown",
             "ci"
-          ]
+          ],
+          "runtimeDeps": []
         }
       ]
     },
@@ -111,7 +115,7 @@
       "description": "The BPMN 2.0 engine and its building blocks. Used together to execute, extend, and serialize workflow processes in JavaScript and TypeScript.",
       "link": {
         "href": "/run/",
-        "label": "Try it live — paste a BPMN diagram and run it in the browser"
+        "label": "Run a diagram in your browser"
       },
       "projects": [
         {
@@ -125,6 +129,12 @@
             "workflow",
             "engine",
             "process"
+          ],
+          "runtimeDeps": [
+            "bpmn-elements",
+            "bpmn-moddle",
+            "moddle-context-serializer",
+            "debug"
           ]
         },
         {
@@ -138,6 +148,10 @@
             "express",
             "workflow",
             "middleware"
+          ],
+          "runtimeDeps": [
+            "lru-cache",
+            "multer"
           ]
         },
         {
@@ -150,6 +164,10 @@
             "bpmn",
             "workflow",
             "elements"
+          ],
+          "runtimeDeps": [
+            "smqp",
+            "@0dep/piso"
           ]
         },
         {
@@ -160,14 +178,15 @@
           "npm": "dmn-elements",
           "link": {
             "href": "/dmn/",
-            "label": "Try it live"
+            "label": "Evaluate a decision"
           },
           "tags": [
             "dmn",
             "decision-table",
             "feel",
             "drg"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "smqp",
@@ -180,7 +199,8 @@
             "broker",
             "queue",
             "pubsub"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "moddle-context-serializer",
@@ -192,7 +212,8 @@
             "bpmn",
             "serializer",
             "moddle"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "bpmn-extensions",
@@ -205,6 +226,9 @@
             "feel",
             "zeebe",
             "extensions"
+          ],
+          "runtimeDeps": [
+            "feelin"
           ]
         },
         {
@@ -218,7 +242,8 @@
             "onify",
             "extensions",
             "automation"
-          ]
+          ],
+          "runtimeDeps": []
         }
       ]
     },
@@ -238,7 +263,8 @@
             "openapi",
             "swagger",
             "typescript"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "aller-pino-gcp-transport",
@@ -251,7 +277,8 @@
             "logging",
             "gcp",
             "google-cloud"
-          ]
+          ],
+          "runtimeDeps": []
         },
         {
           "slug": "onify-fake-amqplib",
@@ -264,6 +291,9 @@
             "amqp",
             "rabbitmq",
             "mock"
+          ],
+          "runtimeDeps": [
+            "smqp"
           ]
         },
         {
@@ -277,7 +307,8 @@
             "time",
             "mock",
             "timezone"
-          ]
+          ],
+          "runtimeDeps": []
         }
       ]
     }

@@ -168,3 +168,30 @@ test('a promise-returning service fails the evaluation loudly', async () => {
     /synchronous/,
   );
 });
+
+test('a decision table without an output column parses but fails evaluation loudly', async () => {
+  // dmn-moddle accepts the table — the missing <output> only surfaces when the
+  // decision is evaluated, as a DecisionError naming the table id
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="defs" name="NoOutput" namespace="https://example.com/dmn/no-output">
+  <decision id="discount" name="Discount">
+    <decisionTable id="table" hitPolicy="UNIQUE">
+      <input id="in1" label="total"><inputExpression id="ie1" typeRef="number"><text>total</text></inputExpression></input>
+      <rule id="r1"><inputEntry id="ue1"><text>&gt;= 100</text></inputEntry><outputEntry id="oe1"><text>0.1</text></outputEntry></rule>
+      <rule id="r2"><inputEntry id="ue2"><text>&lt; 100</text></inputEntry><outputEntry id="oe2"><text>0</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+</definitions>`;
+
+  const { definition, decisions } = await createDmnRunner(source);
+  assert.deepEqual(decisions, [{ id: 'discount', name: 'Discount', type: 'dmn:Decision' }], 'parse succeeds — the gap is not caught here');
+
+  await assert.rejects(
+    evaluateDecision(definition, 'discount', { total: 250 }),
+    (err) => {
+      assert.equal(err.constructor.name, 'DecisionError');
+      assert.match(err.message, /<table> decision table has no output/);
+      return true;
+    },
+  );
+});

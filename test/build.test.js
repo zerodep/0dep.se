@@ -223,10 +223,16 @@ test('home: nav links to /about/', () => {
   assert.ok(homeDoc.querySelector('nav a[href="/about/"]'), 'about link in nav not found');
 });
 
-test('home: footer links to LinkedIn, GitHub org, npm scope', () => {
-  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.linkedin}"]`));
-  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.githubOrg}"]`));
-  assert.ok(homeDoc.querySelector(`a[href="${manifest.site.npmScope}"]`));
+test('home: footer links to LinkedIn, GitHub org, npm scope — named, not raw URLs', () => {
+  for (const [href, label] of [
+    [manifest.site.githubOrg, 'GitHub'],
+    [manifest.site.npmScope, 'npm'],
+    [manifest.site.linkedin, 'LinkedIn'],
+  ]) {
+    const a = homeDoc.querySelector(`footer a[href="${href}"]`);
+    assert.ok(a, `footer link missing: ${href}`);
+    assert.equal(a.textContent.trim(), label, `link should be named, not a raw URL`);
+  }
 });
 
 test('home: only JSON-LD script tags (no executable JS)', () => {

@@ -239,3 +239,33 @@ test('load example fills in source and input data, renders the table and the inp
   assert.ok(totalField, 'total field not rendered from the example');
   assert.equal(totalField.getAttribute('type'), 'number');
 });
+
+test('a decision table without an output column renders square, with a warning', async () => {
+  setSource(`<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="defs" name="NoOutput" namespace="https://example.com/dmn/no-output">
+  <decision id="discount" name="Discount">
+    <decisionTable id="table" hitPolicy="UNIQUE">
+      <input id="in1" label="total"><inputExpression id="ie1" typeRef="number"><text>total</text></inputExpression></input>
+      <rule id="r1"><inputEntry id="ue1"><text>&gt;= 100</text></inputEntry><outputEntry id="oe1"><text>0.1</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+</definitions>`);
+
+  // key on the warning: it only exists once the new source has rendered
+  const warning = await waitFor(() => document.querySelector('#tables figure[data-decision-id="discount"] .table-warning'));
+  const table = document.querySelector('#tables figure[data-decision-id="discount"] table');
+  // the orphan outputEntry gets an unnamed output header so the grid stays square
+  const headCells = table.querySelectorAll('thead th').length;
+  const rowCells = table.querySelectorAll('tbody tr:first-child td').length;
+  assert.equal(headCells, rowCells, `header (${headCells}) and rule row (${rowCells}) should align`);
+
+  assert.match(warning.textContent, /no output column/i);
+  assert.match(warning.textContent, /evaluation will fail/i);
+});
+
+test('a well-formed decision table renders no warning', async () => {
+  setSource(discountSource);
+  // the previous test's warning disappearing marks the fresh render
+  await waitFor(() => !document.querySelector('#tables .table-warning'));
+  assert.ok(document.querySelector('#tables figure[data-decision-id="discount"] th.output'), 'complete table should render its output header');
+});
