@@ -281,6 +281,20 @@
           "runtimeDeps": []
         },
         {
+          "slug": "aller-google-cloud-secret",
+          "name": "@aller/google-cloud-secret",
+          "description": "Concurrency-safe updates of Google Cloud Secret Manager secrets using the secret etag as an optimistic lock, plus a secrets cache and a fake Secret Manager gRPC server for tests.",
+          "repo": "https://github.com/allermedia/google-cloud-secret",
+          "npm": "@aller/google-cloud-secret",
+          "tags": [
+            "gcp",
+            "secret-manager",
+            "cache",
+            "testing"
+          ],
+          "runtimeDeps": []
+        },
+        {
           "slug": "onify-fake-amqplib",
           "name": "@onify/fake-amqplib",
           "description": "In-memory fake of the amqplib RabbitMQ client for unit tests. Drop-in API-compatible replacement so tests don't need a live broker.",
@@ -307,6 +321,20 @@
             "time",
             "mock",
             "timezone"
+          ],
+          "runtimeDeps": []
+        },
+        {
+          "slug": "unnecessary",
+          "name": "unnecessary",
+          "description": "Lightweight coverage for huge projects: finds files never required or imported during testing by comparing the project tree with the require cache and V8 coverage. Ships a CLI, mocha root hooks, and node:test and lab reporters.",
+          "repo": "https://github.com/paed01/unnecessary.js",
+          "npm": "unnecessary",
+          "tags": [
+            "testing",
+            "coverage",
+            "unused",
+            "node:test"
           ],
           "runtimeDeps": []
         }

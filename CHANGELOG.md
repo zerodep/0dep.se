@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.0 - 2026-09-04
+
+- worth a look: unnecessary (files never loaded during testing) and @aller/google-cloud-secret (etag-locked Secret Manager updates)
+- tests: `npm test` reports untouched source files through the unnecessary node:test reporter (V8 coverage, `dist/` excluded) and runs README examples with texample in `posttest`
+- the MCP server test closes stdin instead of killing the child so the server exits on its own
+- `src/serve.js` exports `createStaticServer(root)` and only listens when run directly (`import.meta.main`), so the dev server is covered by tests
+
 ## v1.5.0 - 2026-09-02
 
 - `/tools/`: an interval's repeat renders as what it means — `R-1` reads as "forever", or "until the end date" when the interval has one; counted repeats as "n times"

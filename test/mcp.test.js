@@ -48,7 +48,10 @@ before(() => {
 });
 
 after(() => {
-  child.kill();
+  // close stdin so the server exits on its own (and flushes V8 coverage) instead of being killed
+  const exited = new Promise((resolve) => child.once('exit', resolve));
+  child.stdin.end();
+  return exited;
 });
 
 test('initialize handshake declares the tools capability', async () => {

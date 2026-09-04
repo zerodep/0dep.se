@@ -13,8 +13,8 @@ engine ecosystem. Built from a JSON manifest, deployed to GitHub Pages.
 - About page: `data/profile.json`
 
 ```sh
-npm test    # red/green TDD loop
 npm run build
+npm test    # red/green TDD loop
 npm run serve   # http://localhost:8080
 ```
 

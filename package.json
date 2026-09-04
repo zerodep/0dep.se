@@ -1,12 +1,14 @@
 {
   "name": "zerodep-web",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
   "scripts": {
     "build": "node src/build.js",
-    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "test": "rm -rf coverage/tmp && NODE_V8_COVERAGE=coverage/tmp node --test --test-concurrency=1 --test-reporter spec --test-reporter-destination stdout --test-reporter unnecessary/node-test --test-reporter-destination stdout test/*.test.js",
+    "posttest": "rm -rf coverage/tmp && npm run test:md",
+    "test:md": "texample",
     "serve": "node src/serve.js",
     "mcp": "node src/mcp-server.js"
   },
@@ -29,6 +31,15 @@
     "happy-dom": "^20.10.6",
     "moddle-context-serializer": "^6.0.2",
     "ocrgenerator": "^3.0.0",
+    "texample": "^1.0.2",
+    "unnecessary": "^3.1.0",
     "zeebe-bpmn-moddle": "^2.0.0"
+  },
+  "unnecessary": {
+    "filePattern": "\\.js$",
+    "excludeDirs": [
+      "dist",
+      "coverage"
+    ]
   }
 }
