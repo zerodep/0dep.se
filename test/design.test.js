@@ -149,6 +149,23 @@ test('the avatar ships as a small colour cut-out on the card ground', async () =
   assert.match(styles, /\.profile-header \.avatar \{[^}]*var\(--card\)/, 'avatar sits on the card ground');
 });
 
+test('the avatar offers webp variants sized to the device pixel ratio', async () => {
+  const profile = JSON.parse(await readFile(join(repoRoot, 'data', 'profile.json'), 'utf8'));
+  assert.deepEqual(profile.avatarWebp.map((v) => v.density), [1, 2, 3], 'cover 1x, 2x and 3x screens');
+  let total = 0;
+  for (const { src, density } of profile.avatarWebp) {
+    const webp = await readFile(join(distDir, src.replace(/^\//, '')));
+    assert.equal(webp.toString('ascii', 0, 4), 'RIFF', `${src} should be a RIFF container`);
+    assert.equal(webp.toString('ascii', 8, 16), 'WEBPVP8X', `${src} should be extended webp (keeps alpha)`);
+    const width = webp.readUIntLE(24, 3) + 1;
+    const height = webp.readUIntLE(27, 3) + 1;
+    assert.equal(width, height, `${src} should be square`);
+    assert.equal(width, 144 * density, `${src} should be 9rem × ${density}x`);
+    total += webp.length;
+  }
+  assert.ok(total < 40_000, `all webp variants together should be small, got ${total} bytes`);
+});
+
 test('sub pages carry the ring mark linking home', async () => {
   const png = await readFile(join(distDir, 'logo-mark.png'));
   assert.equal(png.toString('ascii', 1, 4), 'PNG');

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.1 - 2026-09-07
+
+- about page: the avatar is a `<picture>` serving webp sized to the device pixel ratio (144/288/432 px, 3–14 KB) from the new `avatarWebp` manifest field; the 250 KB `avatar.png` stays as the fallback
+
 ## v1.6.0 - 2026-09-04
 
 - worth a look: unnecessary (files never loaded during testing) and @aller/google-cloud-secret (etag-locked Secret Manager updates)

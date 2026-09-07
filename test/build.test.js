@@ -67,7 +67,8 @@ test('writes CNAME with primary domain', async () => {
 
 test('copies brand assets to dist', async () => {
   const avatar = profile.avatar.replace(/^\//, '');
-  for (const f of ['logo.png', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png', avatar]) {
+  const webps = profile.avatarWebp.map((v) => v.src.replace(/^\//, ''));
+  for (const f of ['logo.png', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png', avatar, ...webps]) {
     assert.ok((await stat(join(distDir, f))).isFile(), `missing asset: ${f}`);
   }
 });
@@ -262,6 +263,20 @@ test('about: avatar image references profile.avatar with alt=name', () => {
   assert.ok(img, 'avatar <img> not found');
   assert.equal(img.getAttribute('src'), profile.avatar);
   assert.equal(img.getAttribute('alt'), profile.name);
+});
+
+test('about: avatar is a <picture> offering device-sized webp with the png as fallback', () => {
+  const picture = aboutDoc.querySelector('.profile-header picture');
+  assert.ok(picture, 'avatar <picture> not found');
+  const source = picture.querySelector('source[type="image/webp"]');
+  assert.ok(source, 'webp <source> not found');
+  const expected = profile.avatarWebp.map((v) => `${v.src} ${v.density}x`).join(', ');
+  assert.equal(source.getAttribute('srcset'), expected);
+  const img = picture.querySelector('img.avatar');
+  assert.ok(img, 'png fallback <img> should be inside the <picture>');
+  assert.equal(img.getAttribute('src'), profile.avatar);
+  assert.equal(img.getAttribute('width'), '144', 'width attr should match the 9rem render size');
+  assert.equal(img.getAttribute('height'), '144');
 });
 
 test('about: bio paragraphs match manifest order and content', () => {

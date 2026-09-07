@@ -272,6 +272,20 @@ ${ldBlocks}
 `;
 }
 
+// The avatar renders at a fixed 9rem (144px). Ship webp per device pixel ratio
+// via density descriptors; the original png stays as the universal fallback.
+function avatarPicture(profile) {
+  if (!profile.avatar) return '';
+  const img = `<img class="avatar" src="${escape(profile.avatar)}" alt="${escape(profile.name)}" width="144" height="144">`;
+  const variants = profile.avatarWebp || [];
+  if (!variants.length) return img;
+  const srcset = variants.map((v) => `${escape(v.src)} ${v.density}x`).join(', ');
+  return `<picture>
+      <source type="image/webp" srcset="${srcset}">
+      ${img}
+    </picture>`;
+}
+
 function renderAbout(profile, site) {
   const bio = profile.bio.map((p) => `    <p>${escape(p)}</p>`).join('\n');
   const highlights = profile.highlights
@@ -299,7 +313,7 @@ ${head({
 <body>
   <header class="site-header profile-header">
     ${backLink(site)}
-    ${profile.avatar ? `<img class="avatar" src="${escape(profile.avatar)}" alt="${escape(profile.name)}" width="200" height="200">` : ''}
+    ${avatarPicture(profile)}
     <h1>${escape(profile.name)}</h1>
     <p class="tagline">${escape(profile.headline)}</p>
   </header>
@@ -1030,8 +1044,9 @@ export async function build() {
   for (const f of [...fontFiles, ...fontLicenses]) {
     await copyFile(join(assetsDir, 'fonts', f), join(distDir, 'fonts', f));
   }
-  if (profile.avatar) {
-    const file = profile.avatar.replace(/^\//, '');
+  for (const src of [profile.avatar, ...(profile.avatarWebp || []).map((v) => v.src)]) {
+    if (!src) continue;
+    const file = src.replace(/^\//, '');
     await copyFile(join(assetsDir, file), join(distDir, file));
   }
   for (const f of transparentAssets) {
