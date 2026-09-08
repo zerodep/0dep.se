@@ -283,7 +283,7 @@
         {
           "slug": "aller-google-cloud-secret",
           "name": "@aller/google-cloud-secret",
-          "description": "Concurrency-safe updates of Google Cloud Secret Manager secrets using the secret etag as an optimistic lock, plus a secrets cache and a fake Secret Manager gRPC server for tests.",
+          "description": "Concurrency-safe updates of Google Cloud Secret Manager secrets using the secret etag as an optimistic lock, plus a secrets cache and a Secret Manager gRPC emulator for testing without a live project.",
           "repo": "https://github.com/allermedia/google-cloud-secret",
           "npm": "@aller/google-cloud-secret",
           "tags": [

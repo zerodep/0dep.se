@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.6.2 - 2026-09-08
+
+- dependencies: bpmn-elements 18.0.24 (`rc` dist-tag, pulls smqp 14)
+- worth a look: @aller/google-cloud-secret's card describes its test server as the Secret Manager gRPC emulator the package now exports from `@aller/google-cloud-secret/emulator`
+
 ## v1.6.1 - 2026-09-07
 
 - about page: the avatar is a `<picture>` serving webp sized to the device pixel ratio (144/288/432 px, 3–14 KB) from the new `avatarWebp` manifest field; the 250 KB `avatar.png` stays as the fallback
