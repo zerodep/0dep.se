@@ -7,6 +7,14 @@ Source for **[0dep.se](https://0dep.se)**.
 Static landing page for the zerodep org's npm packages and the BPMN
 engine ecosystem. Built from a JSON manifest, deployed to GitHub Pages.
 
+<!-- toc -->
+
+- [Updating content](#updating-content)
+- [Pages](#pages)
+- [Deployment](#deployment)
+
+<!-- /toc -->
+
 ## Updating content
 
 - Project list: `data/projects.json`
@@ -16,7 +24,19 @@ engine ecosystem. Built from a JSON manifest, deployed to GitHub Pages.
 npm run build
 npm test    # red/green TDD loop
 npm run serve   # http://localhost:8080
+npm run toc     # regenerate this file's table of contents (also runs in pretest)
 ```
+
+## Pages
+
+- `/` — the package catalogue, drawn in BPMN notation
+- `/run/` — run a BPMN diagram in the browser
+- `/dmn/` — evaluate a DMN decision in the browser
+- `/tools/` — ISO 8601 parser and bankgiro OCR toolbox
+- `/toc/` — markdown table of contents generator: drop a `.md` file or
+  paste markdown, powered by [@0dep/toc](https://github.com/zerodep/toc),
+  the same package that keeps the toc above fresh
+- `/about/` — the maintainer
 
 ## Deployment
 
@@ -27,8 +47,9 @@ is served from a branch). Every push to `main` (or a manual
 
 1. `npm ci` on the Node version pinned in `.nvmrc`
 2. `npm test` — a failing test blocks the deploy
-3. `npm run build` — renders the pages, bundles the `/run/` and `/dmn/`
-   apps with esbuild into `dist/`, and writes `dist/CNAME`
+3. `npm run build` — renders the pages, bundles the `/run/`, `/dmn/`,
+   `/tools/` and `/toc/` apps with esbuild into `dist/`, and writes
+   `dist/CNAME`
 4. `actions/upload-pages-artifact` + `actions/deploy-pages` publish `dist/`
 5. an IndexNow ping (best effort) tells Bing, Yandex, Naver and Seznam to
    re-crawl the deployed URLs

@@ -1,16 +1,18 @@
 {
   "name": "zerodep-web",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
   "scripts": {
     "build": "node src/build.js",
+    "pretest": "npm run toc",
     "test": "rm -rf coverage/tmp && NODE_V8_COVERAGE=coverage/tmp node --test --test-concurrency=1 --test-reporter spec --test-reporter-destination stdout --test-reporter unnecessary/node-test --test-reporter-destination stdout test/*.test.js",
     "posttest": "rm -rf coverage/tmp && npm run test:md",
     "test:md": "texample",
     "serve": "node src/serve.js",
-    "mcp": "node src/mcp-server.js"
+    "mcp": "node src/mcp-server.js",
+    "toc": "toc README.md"
   },
   "engines": {
     "node": ">=26"
@@ -20,6 +22,8 @@
   "devDependencies": {
     "@0dep/bpmn-extensions": "^0.0.6",
     "@0dep/piso": "^5.1.0",
+    "@0dep/toc": "^1.0.0",
+    "amqp-emulator": "^0.1.0",
     "bpmn-elements": "^18.0.24",
     "bpmn-js": "^18.24.0",
     "bpmn-moddle": "^10.1.0",

@@ -44,3 +44,21 @@ test('deploy workflow pings IndexNow after deploying', async () => {
   assert.match(workflow, /api\.indexnow\.org/, 'workflow should ping IndexNow');
   assert.match(workflow, /\/dmn\//, 'ping should list the dmn page');
 });
+
+test('sitemap.xml lists the home and about images through the image extension', async () => {
+  const sitemap = await readFile(join(distDir, 'sitemap.xml'), 'utf8');
+  const profile = JSON.parse(await readFile(join(repoRoot, 'data', 'profile.json'), 'utf8'));
+  const base = `https://${manifest.site.primaryDomain}`;
+  assert.ok(sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'), 'image namespace declared');
+  const entries = sitemap.split('<url>').slice(1);
+  const home = entries.find((u) => u.includes(`<loc>${base}/</loc>`));
+  assert.ok(home, 'home entry');
+  assert.ok(home.includes(`<image:image>\n      <image:loc>${base}${manifest.site.ogImage}</image:loc>\n    </image:image>`), 'home lists the og image');
+  const about = entries.find((u) => u.includes(`<loc>${base}/about/</loc>`));
+  assert.ok(about, 'about entry');
+  assert.ok(about.includes(`<image:loc>${base}${profile.avatar}</image:loc>`), 'about lists the avatar');
+  for (const entry of entries) {
+    if (entry === home || entry === about) continue;
+    assert.ok(!entry.includes('<image:'), 'pages without images carry no image entries');
+  }
+});

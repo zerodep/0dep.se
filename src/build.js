@@ -239,7 +239,7 @@ function renderHome(manifest) {
   const groupNav = groups
     .map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`)
     .join(' &middot; ');
-  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/tools/">Tools</a> &middot; <a href="/about/">About</a>`;
+  const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/tools/">Tools</a> &middot; <a href="/toc/">Markdown TOC</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
   const npmToSlug = new Map(groups.flatMap((g) => g.projects.filter((p) => p.npm).map((p) => [p.npm, p.slug])));
 
@@ -792,6 +792,153 @@ ${ldBlocks}
 `;
 }
 
+const tocFaq = [
+  {
+    q: 'Is my markdown uploaded anywhere?',
+    a: 'No. This is a static page and @0dep/toc runs entirely in your browser — the file you drop or the text you paste never leaves your machine. The page makes no network requests with your content, and its Content-Security-Policy blocks requests to any other origin. The site is open source, so you can verify this in the code.',
+  },
+  {
+    q: 'Where does the table of contents go?',
+    a: 'Between a pair of markers, <!-- toc --> and <!-- /toc -->, each on a line of its own. Every heading below the start marker is listed, nothing above it, so the document title stays out when the markers sit under it. Only the lines between the markers are replaced; nothing else in the document is touched. A document without markers gets a block listing every heading, inserted below the first heading as a starting point.',
+  },
+  {
+    q: 'Do the anchors match GitHub?',
+    a: 'Yes. Slugs follow the github-slugger algorithm GitHub uses for its heading anchors: lowercase, punctuation dropped, spaces turned into hyphens, and duplicate headings numbered -1, -2 and so on. Inline code, links, emphasis and html in a heading are reduced to the text GitHub renders before slugging.',
+  },
+  {
+    q: 'Can the list be collapsed?',
+    a: 'Ask for it on the start marker, <!-- toc collapsible --> or <!-- toc collapsed -->, optionally with a summary text such as collapsed="Contents", and the list is wrapped in an html details element. Collapsible starts open, collapsed starts folded. Without markers, the options on this page do the same for the generated block.',
+  },
+  {
+    q: 'What gets skipped?',
+    a: 'A start marker without an end marker, an end marker without a start, a pair with no headings below it, and a start marker with an unknown option or a malformed attribute — each is listed with its line number and left as it is rather than guessed at. Markers and headings inside fenced code blocks are ignored, as are markers indented four spaces or more.',
+  },
+  {
+    q: 'How do I keep a README fresh from the command line?',
+    a: 'Install @0dep/toc as a dev dependency and run npx toc README.md, or put it in a pretest script so the toc is regenerated before every test run. The generated block is formatted the way prettier formats markdown, so the two do not fight.',
+  },
+];
+
+function ldToc(site) {
+  const baseUrl = `https://${site.primaryDomain}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'Markdown table of contents generator — GitHub flavoured, in the browser',
+      url: `${baseUrl}/toc/`,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Any',
+      browserRequirements: 'Requires JavaScript',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Generate a GitHub flavoured table of contents for any markdown file with @0dep/toc',
+        'Drop a .md file or paste markdown — the toc is written between <!-- toc --> markers, or listed for every heading',
+        'Anchors match GitHub, duplicate headings numbered like GitHub',
+        'Optional collapsible or collapsed details wrapper',
+        'Copy the toc or the updated document, or download the file',
+        'Works offline after the first visit',
+      ],
+      author: { '@type': 'Person', name: site.author ?? 'Pål Edman' },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: tocFaq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    },
+  ];
+}
+
+function renderTocPage(site) {
+  const faq = tocFaq
+    .map(
+      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
+    )
+    .join('\n');
+  const ldBlocks = ldToc(site).map(jsonLd).join('\n');
+  return `<!doctype html>
+<html lang="en">
+<head>
+${head({
+    site,
+    title: `Markdown table of contents generator — GitHub flavoured, online — ${site.title}`,
+    description:
+      'Free online markdown table of contents generator: drop a README or paste markdown and get a GitHub flavoured toc with anchors that match GitHub — written between <!-- toc --> markers, nothing else touched. Runs in your browser, no upload, no account. Powered by @0dep/toc.',
+    keywords:
+      'markdown toc, markdown table of contents, table of contents generator, readme toc, readme table of contents, github toc, github markdown anchors, github slug, toc markers, markdown toc online, generate toc markdown, doctoc alternative, markdown-toc, @0dep/toc',
+    path: '/toc/',
+    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+  })}
+</head>
+<body>
+  <header class="site-header run-header">
+    ${backLink(site)}
+    <h1>Markdown table of contents generator</h1>
+    <p class="tagline">Drop a <code>.md</code> file or paste markdown and get a GitHub flavoured table of contents, written between <code>&lt;!-- toc --&gt;</code> markers and nowhere else &mdash; powered by <a href="https://github.com/zerodep/toc" rel="noopener">@0dep/toc</a>, all in your browser. More small tools? <a href="/tools/">ISO 8601 &amp; OCR</a> &middot; <a href="/run/">Run BPMN</a>.</p>
+  </header>
+  <main class="run toc">
+    <section class="run-input" data-dropzone>
+      <label for="source">Markdown &mdash; paste it, or drop a <code>.md</code> file on this panel</label>
+      <textarea id="source" spellcheck="false" placeholder="# My project&#10;&#10;&lt;!-- toc --&gt;&#10;&lt;!-- /toc --&gt;&#10;&#10;## Install&#10;&#10;## Usage"></textarea>
+      <div class="run-toolbar">
+        <div class="run-actions">
+          <button id="generate" type="button">Generate</button>
+          <button id="example" type="button" class="secondary">Load example</button>
+        </div>
+        <div class="run-options tool-options">
+          <label>Without markers, wrap in
+            <select id="toc-wrap" name="toc-wrap">
+              <option value="plain">nothing</option>
+              <option value="collapsible">details, open</option>
+              <option value="collapsed">details, collapsed</option>
+            </select>
+          </label>
+          <label>Summary <input id="toc-summary" name="toc-summary" type="text" spellcheck="false" autocomplete="off" placeholder="Table of contents"></label>
+        </div>
+      </div>
+      <p class="hint">Put <code>&lt;!-- toc --&gt;</code> and <code>&lt;!-- /toc --&gt;</code> on lines of their own where the list should go; every heading below the start marker is listed and only the lines between the markers are replaced. Add <code>collapsible</code> or <code>collapsed="Contents"</code> to the start marker for a folding list. Without markers the block lists every heading and is inserted below the first heading, ready to paste back. Slugs match GitHub&rsquo;s anchors, duplicates included.</p>
+    </section>
+
+    <section class="toc-result" aria-live="polite" aria-label="Result">
+      <p id="toc-status" class="result-headline" hidden></p>
+      <ul id="toc-pairs" class="toc-pairs"></ul>
+      <div class="tool-heading">
+        <h2>Table of contents</h2>
+        <button id="copy-block" type="button" class="secondary" disabled>Copy</button>
+      </div>
+      <pre id="toc-block" class="toc-block"></pre>
+      <div class="tool-heading">
+        <h2>Updated document</h2>
+        <span class="run-actions">
+          <button id="copy-output" type="button" class="secondary" disabled>Copy</button>
+          <a id="download" class="button secondary" download="README.md" hidden>Download</a>
+        </span>
+      </div>
+      <textarea id="output" readonly spellcheck="false" aria-label="Updated markdown"></textarea>
+    </section>
+
+    <section class="run-about">
+      <h2>A GitHub flavoured toc, in your browser</h2>
+      <p>This page is a playground for <a href="https://github.com/zerodep/toc" rel="noopener">@0dep/toc</a>, a zero-dependency markdown table of contents generator. It is string in, string out: the toc is written between <code>&lt;!-- toc --&gt;</code> and <code>&lt;!-- /toc --&gt;</code> markers and only there, nothing outside them is ever touched, nothing is inserted or guessed. Anchors follow GitHub&rsquo;s own slug algorithm, duplicate headings get <code>-1</code>, <code>-2</code> like GitHub, and headings inside fenced code blocks are ignored. The same library runs as <code>npx toc README.md</code> in a repo, typically from a <code>pretest</code> script so the list never goes stale. Your markdown never leaves the browser, and after the first visit the page works offline.</p>
+      <dl class="faq">
+${faq}
+      </dl>
+      <p class="source">Don&rsquo;t take our word for it &mdash; the whole site is open source: <a href="${escape(site.sourceRepo)}" rel="noopener">${escape(site.sourceRepo.replace('https://', ''))}</a>.</p>
+    </section>
+  </main>
+${footer(site)}
+${ldBlocks}
+  <script type="module" src="/toc/app.js"></script>
+</body>
+</html>
+`;
+}
+
 /**
  * Cache-first service worker so /run/ works offline. The cache name carries a
  * content hash — a new deploy installs a fresh cache and drops the old one.
@@ -869,6 +1016,7 @@ function llmsTxt(manifest) {
 - [Run BPMN online](${base}/run/): execute BPMN 2.0 diagrams entirely in the browser — FEEL expressions, zeebe and camunda 7 extensions, DMN decision tables via business rule tasks. Nothing is uploaded.
 - [Evaluate DMN online](${base}/dmn/): evaluate DMN decisions in the browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace.
 - [ISO 8601 & bankgiro OCR toolbox](${base}/tools/): parse ISO 8601 dates, durations and intervals with @0dep/piso, validate or generate Swedish bankgiro OCR references with ocrgenerator — with a local browser history.
+- [Markdown table of contents generator](${base}/toc/): drop a README or paste markdown and get a GitHub flavoured toc between <!-- toc --> markers with @0dep/toc — anchors match GitHub, nothing else in the file is touched.
 - [About](${base}/about/): the maintainer behind the packages.
 
 ${groupSections.join('\n\n')}
@@ -883,41 +1031,37 @@ Sitemap: https://${site.primaryDomain}/sitemap.xml
 `;
 }
 
-function sitemapXml(site) {
+/**
+ * sitemap.xml with the image extension: a page that has an image worth
+ * discovering (the home og-image, the about avatar) lists it inside its entry.
+ * Google reads only image:loc these days, other engines ignore the extension.
+ */
+function sitemapXml(site, { images = {} } = {}) {
   const base = `https://${site.primaryDomain}`;
   const today = new Date().toISOString().slice(0, 10);
+  const pages = [
+    { path: '/', changefreq: 'weekly', priority: '1.0' },
+    { path: '/run/', changefreq: 'weekly', priority: '0.8' },
+    { path: '/dmn/', changefreq: 'weekly', priority: '0.8' },
+    { path: '/tools/', changefreq: 'monthly', priority: '0.7' },
+    { path: '/toc/', changefreq: 'monthly', priority: '0.7' },
+    { path: '/about/', changefreq: 'monthly', priority: '0.5' },
+  ];
+  const entries = pages.map(({ path, changefreq, priority }) => {
+    const imageTags = (images[path] ?? [])
+      .filter(Boolean)
+      .map((src) => `\n    <image:image>\n      <image:loc>${escape(src.startsWith('http') ? src : `${base}${src}`)}</image:loc>\n    </image:image>`)
+      .join('');
+    return `  <url>
+    <loc>${base}${path}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>${imageTags}
+  </url>`;
+  });
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${base}/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${base}/run/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${base}/dmn/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${base}/tools/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${base}/about/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${entries.join('\n')}
 </urlset>
 `;
 }
@@ -931,6 +1075,7 @@ export async function build() {
   await mkdir(join(distDir, 'run'), { recursive: true });
   await mkdir(join(distDir, 'dmn'), { recursive: true });
   await mkdir(join(distDir, 'tools'), { recursive: true });
+  await mkdir(join(distDir, 'toc'), { recursive: true });
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
@@ -1035,6 +1180,35 @@ export async function build() {
     ])),
   ).toString(16);
   await writeFile(join(distDir, 'tools', 'sw.js'), renderServiceWorker(toolsAssets, toolsSwVersion, 'tools'));
+  // the /toc/ generator — @0dep/toc, one small bundle, own offline cache
+  await writeFile(join(distDir, 'toc', 'index.html'), renderTocPage(manifest.site));
+  await bundleJs({
+    entryPoints: [join(root, 'src', 'runner', 'toc-app.js')],
+    outfile: join(distDir, 'toc', 'app.js'),
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    minify: true,
+    logLevel: 'silent',
+  });
+  await copyFile(join(root, 'test', 'resources', 'example.md'), join(distDir, 'toc', 'example.md'));
+  const tocAssets = [
+    ...fontAssets,
+    '/toc/',
+    '/toc/index.html',
+    '/toc/app.js',
+    '/toc/example.md',
+    '/styles.css',
+    '/favicon-32.png',
+    '/favicon-192.png',
+  ];
+  const tocSwVersion = crc32(
+    Buffer.concat(await Promise.all([
+      readFile(join(distDir, 'toc', 'app.js')),
+      readFile(join(distDir, 'toc', 'index.html')),
+    ])),
+  ).toString(16);
+  await writeFile(join(distDir, 'toc', 'sw.js'), renderServiceWorker(tocAssets, tocSwVersion, 'toc'));
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
@@ -1055,7 +1229,9 @@ export async function build() {
   }
   await writeFile(join(distDir, 'CNAME'), manifest.site.primaryDomain + '\n');
   await writeFile(join(distDir, 'robots.txt'), robotsTxt(manifest.site));
-  await writeFile(join(distDir, 'sitemap.xml'), sitemapXml(manifest.site));
+  await writeFile(join(distDir, 'sitemap.xml'), sitemapXml(manifest.site, {
+    images: { '/': [manifest.site.ogImage], '/about/': [profile.avatar] },
+  }));
   await writeFile(join(distDir, 'llms.txt'), llmsTxt(manifest));
 
   // Mirror static/ verbatim — site-verification HTML files, well-known endpoints, etc.

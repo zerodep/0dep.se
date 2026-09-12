@@ -106,6 +106,40 @@
             "ci"
           ],
           "runtimeDeps": []
+        },
+        {
+          "slug": "toc",
+          "name": "@0dep/toc",
+          "description": "Generate a GitHub flavoured table of contents for markdown files. String in, string out, slugs match GitHub's anchors, and only the text between the toc markers is ever touched. Ships a CLI for keeping READMEs fresh.",
+          "repo": "https://github.com/zerodep/toc",
+          "npm": "@0dep/toc",
+          "tags": [
+            "markdown",
+            "readme",
+            "toc",
+            "cli"
+          ],
+          "runtimeDeps": [],
+          "link": {
+            "href": "/toc/",
+            "label": "Generate a table of contents"
+          }
+        },
+        {
+          "slug": "amqp-emulator",
+          "name": "amqp-emulator",
+          "description": "In-memory AMQP broker emulator for integration tests. Listens on a real TCP port and speaks both AMQP 0-9-1 and 1.0, so amqplib, rhea, and the Azure Service Bus SDK all work against it without a broker container.",
+          "repo": "https://github.com/zerodep/amqp-emulator",
+          "npm": "amqp-emulator",
+          "tags": [
+            "amqp",
+            "rabbitmq",
+            "testing",
+            "broker"
+          ],
+          "runtimeDeps": [
+            "smqp"
+          ]
         }
       ]
     },

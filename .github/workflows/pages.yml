@@ -59,6 +59,7 @@ jobs:
                 "https://0dep.se/run/",
                 "https://0dep.se/dmn/",
                 "https://0dep.se/tools/",
+                "https://0dep.se/toc/",
                 "https://0dep.se/about/"
               ]
             }'

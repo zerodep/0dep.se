@@ -809,3 +809,89 @@ main.profile {
 .project .deps .builds-on a { color: inherit; text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 2px; }
 .project .deps .builds-on a:hover { color: var(--token); }
 
+
+/* /toc/ — markdown table of contents generator */
+.toc .run-input textarea { min-height: 14rem; }
+.toc .run-toolbar { margin: 1rem 0 0; }
+.toc .tool-options {
+  display: flex;
+  gap: 0.5rem 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.toc .tool-options label { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); }
+.toc .tool-options select,
+.toc .tool-options input[type="text"] {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1rem 0.3rem;
+}
+.toc .tool-options input[type="text"] { width: 9rem; }
+.toc .tool-options input[type="text"]:focus-visible,
+.toc .tool-options select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.toc .run-input .hint { margin-top: 0.75rem; }
+.toc .toc-result {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.toc .toc-result .result-headline { margin: 0; font-weight: 600; color: var(--accent); }
+.toc .toc-result .result-headline.muted { color: var(--muted); }
+.toc .toc-pairs { list-style: none; margin: 0; padding: 0; font-size: 0.85rem; color: var(--muted); }
+.toc .toc-pairs:empty { display: none; }
+.toc .toc-pairs li { padding: 0.15rem 0; }
+.toc .toc-pairs li.updated { color: var(--fg); }
+.toc .toc-pairs li.skipped { color: #b9770e; }
+.toc .toc-pairs code { font-size: 0.88em; }
+.toc .tool-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.toc .tool-heading h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; letter-spacing: -0.01em; }
+.toc .tool-heading .run-actions { margin: 0; }
+.toc .toc-block {
+  margin: 0;
+  min-height: 3rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+.toc .toc-block:empty::before { content: 'Nothing yet — paste markdown or drop a file above.'; color: var(--muted); }
+.toc textarea#output {
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+.toc textarea#output:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.toc a.button[hidden] { display: none; }
+.toc a.button {
+  display: inline-block;
+  font: inherit;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  padding: 0.45rem 1.25rem;
+  text-decoration: none;
+}

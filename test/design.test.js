@@ -58,9 +58,12 @@ test('runtimeDeps match the published dependencies of packages installed locally
   assert.ok(checked >= 3, 'expected several listed packages to be installed for cross-checking');
 });
 
-test('the zerodep group is actually dependency-free', () => {
+test('the zerodep group only builds on packages listed on this page', () => {
+  const listed = new Set(allProjects().filter((p) => p.npm).map((p) => p.npm));
   const group = manifest.groups.find((g) => g.id === 'zerodep');
-  for (const p of group.projects) assert.deepEqual(p.runtimeDeps, [], `${p.slug} should have zero runtime deps`);
+  for (const p of group.projects) {
+    for (const dep of p.runtimeDeps) assert.ok(listed.has(dep), `${p.slug}: dependency ${dep} is not an in-house package on this page`);
+  }
 });
 
 // --- home: the page is drawn in the notation it executes ---

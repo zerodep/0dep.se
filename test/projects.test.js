@@ -69,6 +69,8 @@ test('expected zerodep packages are present', () => {
     'pino-applicationinsights',
     'ocrgenerator',
     'texample',
+    'toc',
+    'amqp-emulator',
     'bpmn-engine',
     'bpmn-extensions',
     'dmn-elements',
@@ -83,4 +85,18 @@ test('dmn-elements is listed in the bpmn-engine group', () => {
   assert.ok(project, 'dmn-elements missing from bpmn-engine group');
   assert.equal(project.npm, 'dmn-elements');
   assert.equal(project.repo, 'https://github.com/zerodep/dmn-elements');
+});
+
+test('toc and amqp-emulator are listed in the zerodep group', () => {
+  const group = manifest.groups.find((g) => g.id === 'zerodep');
+  const toc = group.projects.find((p) => p.slug === 'toc');
+  assert.ok(toc, 'toc missing from zerodep group');
+  assert.equal(toc.npm, '@0dep/toc');
+  assert.equal(toc.repo, 'https://github.com/zerodep/toc');
+
+  const amqp = group.projects.find((p) => p.slug === 'amqp-emulator');
+  assert.ok(amqp, 'amqp-emulator missing from zerodep group');
+  assert.equal(amqp.repo, 'https://github.com/zerodep/amqp-emulator');
+  assert.equal(amqp.npm, 'amqp-emulator');
+  assert.deepEqual(amqp.runtimeDeps, ['smqp']);
 });
