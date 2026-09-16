@@ -20,7 +20,7 @@
   "license": "MIT",
   "author": "Pål Edman",
   "devDependencies": {
-    "@0dep/bpmn-extensions": "^0.0.6",
+    "@0dep/bpmn-extensions": "^0.1.0",
     "@0dep/piso": "^5.1.0",
     "@0dep/toc": "^1.0.0",
     "amqp-emulator": "^0.1.0",
