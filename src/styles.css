@@ -311,6 +311,34 @@ main.profile {
 }
 .run-header h1 { margin: 0 0 0.75rem; line-height: 1.2; }
 
+/* version tags: which release of each lib the page runs — a label, drawn like a small task box */
+.lib-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+}
+.version-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  color: var(--ink);
+  text-decoration: none;
+}
+.version-tag .version { color: var(--slate); }
+.version-tag:hover,
+.version-tag:focus-visible { border-color: var(--token); color: var(--token); }
+.version-tag:hover .version,
+.version-tag:focus-visible .version { color: inherit; }
+
 .run { display: grid; gap: 2rem; padding-bottom: 3rem; }
 
 .run-input {

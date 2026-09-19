@@ -185,6 +185,39 @@ function footer(site) {
 }
 
 /**
+ * The libraries each runner page bundles, in the order the page leans on them.
+ * Their installed versions are read from node_modules at build time so the
+ * page can say exactly which release you are testing.
+ */
+const RUNNER_LIBS = {
+  run: ['bpmn-elements', '@0dep/bpmn-extensions', 'dmn-elements', 'bpmn-js'],
+  dmn: ['dmn-elements', 'dmn-moddle'],
+  tools: ['@0dep/piso', 'ocrgenerator'],
+  toc: ['@0dep/toc'],
+};
+
+async function readLibVersions(names) {
+  const versions = {};
+  for (const name of names) {
+    const pkg = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8'));
+    versions[name] = pkg.version;
+  }
+  return versions;
+}
+
+/** Version tags: one per bundled lib, each linking the exact release on npm. */
+function renderLibVersions(names, versions) {
+  const tags = names.map((name) => {
+    const version = versions[name];
+    if (!version) throw new Error(`no installed version for ${name}`);
+    return `<a class="version-tag" href="https://www.npmjs.com/package/${escape(name)}/v/${escape(version)}" rel="noopener"><span class="name">${escape(name)}</span><span class="version">v${escape(version)}</span></a>`;
+  });
+  return `<p class="lib-versions" aria-label="Library versions">
+      ${tags.join('\n      ')}
+    </p>`;
+}
+
+/**
  * The dependency eyebrow: the site's promise is zero dependencies, so every card
  * opens with the real number. Zero renders as the ring mark; anything else says
  * what the package builds on, linking siblings that are listed on the page.
@@ -389,7 +422,7 @@ function ldRun(site) {
   ];
 }
 
-function renderRun(site) {
+function renderRun(site, versions) {
   const faq = runFaq
     .map(
       ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
@@ -418,6 +451,7 @@ ${head({
     ${backLink(site)}
     <h1>Run a BPMN diagram</h1>
     <p class="tagline">Paste or drop BPMN 2.0 XML and execute it right here in the browser &mdash; <a href="https://github.com/paed01/bpmn-elements" rel="noopener">bpmn-elements</a> wired with <a href="https://github.com/zerodep/bpmn-extensions" rel="noopener">@0dep/bpmn-extensions</a>, drawn with <a href="https://github.com/bpmn-io/bpmn-js" rel="noopener">bpmn-js</a>.</p>
+    ${renderLibVersions(RUNNER_LIBS.run, versions)}
   </header>
   <main class="run">
     <section class="run-canvas" aria-label="Diagram">
@@ -546,7 +580,7 @@ function ldDmn(site) {
   ];
 }
 
-function renderDmn(site) {
+function renderDmn(site, versions) {
   const faq = dmnFaq
     .map(
       ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
@@ -573,6 +607,7 @@ ${head({
     ${backLink(site)}
     <h1>Evaluate a DMN decision</h1>
     <p class="tagline">Paste or drop a DMN file and evaluate decisions right here in the browser &mdash; powered by <a href="https://github.com/zerodep/dmn-elements" rel="noopener">dmn-elements</a>, parsed with <a href="https://github.com/bpmn-io/dmn-moddle" rel="noopener">dmn-moddle</a>. Whole diagrams? <a href="/run/">Run BPMN</a>.</p>
+    ${renderLibVersions(RUNNER_LIBS.dmn, versions)}
   </header>
   <main class="run">
     <section class="run-canvas dmn-view" aria-label="Decisions">
@@ -694,7 +729,7 @@ function ldTools(site) {
   ];
 }
 
-function renderTools(site) {
+function renderTools(site, versions) {
   const faq = toolsFaq
     .map(
       ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
@@ -720,6 +755,7 @@ ${head({
     ${backLink(site)}
     <h1>ISO 8601 &amp; bankgiro OCR toolbox</h1>
     <p class="tagline">Test ISO 8601 dates, durations and intervals with <a href="https://github.com/zerodep/piso" rel="noopener">@0dep/piso</a>, and validate or generate Swedish bankgiro OCR references with <a href="https://github.com/zerodep/ocrgenerator" rel="noopener">ocrgenerator</a> &mdash; all in your browser, with a local history of what you tried. Looking for the process engines? <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Evaluate DMN</a>.</p>
+    ${renderLibVersions(RUNNER_LIBS.tools, versions)}
   </header>
   <main class="run tools">
     <section class="tool" id="iso" aria-labelledby="iso-title">
@@ -854,7 +890,7 @@ function ldToc(site) {
   ];
 }
 
-function renderTocPage(site) {
+function renderTocPage(site, versions) {
   const faq = tocFaq
     .map(
       ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
@@ -880,6 +916,7 @@ ${head({
     ${backLink(site)}
     <h1>Markdown table of contents generator</h1>
     <p class="tagline">Drop a <code>.md</code> file or paste markdown and get a GitHub flavoured table of contents, written between <code>&lt;!-- toc --&gt;</code> markers and nowhere else &mdash; powered by <a href="https://github.com/zerodep/toc" rel="noopener">@0dep/toc</a>, all in your browser. More small tools? <a href="/tools/">ISO 8601 &amp; OCR</a> &middot; <a href="/run/">Run BPMN</a>.</p>
+    ${renderLibVersions(RUNNER_LIBS.toc, versions)}
   </header>
   <main class="run toc">
     <section class="run-input" data-dropzone>
@@ -1076,10 +1113,11 @@ export async function build() {
   await mkdir(join(distDir, 'dmn'), { recursive: true });
   await mkdir(join(distDir, 'tools'), { recursive: true });
   await mkdir(join(distDir, 'toc'), { recursive: true });
+  const versions = await readLibVersions(Object.values(RUNNER_LIBS).flat());
 
   await writeFile(join(distDir, 'index.html'), renderHome(manifest));
   await writeFile(join(distDir, 'about', 'index.html'), renderAbout(profile, manifest.site));
-  await writeFile(join(distDir, 'run', 'index.html'), renderRun(manifest.site));
+  await writeFile(join(distDir, 'run', 'index.html'), renderRun(manifest.site, versions));
   await bundleJs({
     // out: 'app' keeps the public URL /run/app.js despite the entry file's name
     entryPoints: [{ in: join(root, 'src', 'runner', 'bpmn-app.js'), out: 'app' }],
@@ -1125,7 +1163,7 @@ export async function build() {
   await writeFile(join(distDir, 'run', 'sw.js'), renderServiceWorker(runAssets, swVersion));
 
   // the /dmn/ evaluator page — same treatment, its own bundle and offline cache
-  await writeFile(join(distDir, 'dmn', 'index.html'), renderDmn(manifest.site));
+  await writeFile(join(distDir, 'dmn', 'index.html'), renderDmn(manifest.site, versions));
   await bundleJs({
     entryPoints: [join(root, 'src', 'runner', 'dmn-app.js')],
     outfile: join(distDir, 'dmn', 'app.js'),
@@ -1154,7 +1192,7 @@ export async function build() {
   ).toString(16);
   await writeFile(join(distDir, 'dmn', 'sw.js'), renderServiceWorker(dmnAssets, dmnSwVersion, 'dmn'));
   // the /tools/ playground — piso + ocrgenerator, one small bundle, own offline cache
-  await writeFile(join(distDir, 'tools', 'index.html'), renderTools(manifest.site));
+  await writeFile(join(distDir, 'tools', 'index.html'), renderTools(manifest.site, versions));
   await bundleJs({
     entryPoints: [join(root, 'src', 'runner', 'tools-app.js')],
     outfile: join(distDir, 'tools', 'app.js'),
@@ -1181,7 +1219,7 @@ export async function build() {
   ).toString(16);
   await writeFile(join(distDir, 'tools', 'sw.js'), renderServiceWorker(toolsAssets, toolsSwVersion, 'tools'));
   // the /toc/ generator — @0dep/toc, one small bundle, own offline cache
-  await writeFile(join(distDir, 'toc', 'index.html'), renderTocPage(manifest.site));
+  await writeFile(join(distDir, 'toc', 'index.html'), renderTocPage(manifest.site, versions));
   await bundleJs({
     entryPoints: [join(root, 'src', 'runner', 'toc-app.js')],
     outfile: join(distDir, 'toc', 'app.js'),

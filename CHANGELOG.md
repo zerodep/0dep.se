@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.0 - 2026-09-19
+
+- runner pages (`/run/`, `/dmn/`, `/tools/`, `/toc/`) carry version tags under the heading: one per bundled lib, showing the installed version read from `node_modules` at build time and linking the exact release on npm — so you can tell which version of the lib you are testing
+
 ## v1.7.0 - 2026-09-12
 
 - new `/toc/` page: drop a `.md` file or paste markdown and get a GitHub flavoured table of contents from @0dep/toc — written between `<!-- toc -->` markers with per-pair status (updated, up to date, skipped with line and reason), or listed for every heading and inserted below the first heading when the document has no markers; optional collapsible/collapsed details wrapper; copy the block or the document, or download the file under its dropped name; own bundle and `toc-` offline cache; the toc card links to it

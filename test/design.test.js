@@ -217,3 +217,42 @@ test('runner pages precache the fonts for offline use', async () => {
     assert.ok(sw.includes('"/fonts/jost-latin.woff2"'), `${page} service worker should precache the display font`);
   }
 });
+
+// --- runner pages: which version of the lib you are testing ---
+
+const runnerLibs = {
+  run: ['bpmn-elements', '@0dep/bpmn-extensions', 'dmn-elements', 'bpmn-js'],
+  dmn: ['dmn-elements', 'dmn-moddle'],
+  tools: ['@0dep/piso', 'ocrgenerator'],
+  toc: ['@0dep/toc'],
+};
+
+test('runner pages tag the exact version of every lib they run', async () => {
+  for (const [page, libs] of Object.entries(runnerLibs)) {
+    const doc = parseHtml(await readFile(join(distDir, page, 'index.html'), 'utf8'));
+    const list = doc.querySelector('header.run-header .lib-versions');
+    assert.ok(list, `${page}: header should carry a lib-versions list`);
+    assert.match(list.getAttribute('aria-label') ?? '', /version/i, `${page}: list should be labelled`);
+    const tags = [...list.querySelectorAll('.version-tag')];
+    assert.deepEqual(
+      tags.map((t) => t.querySelector('.name').textContent),
+      libs,
+      `${page}: one tag per lib, in bundle order`,
+    );
+    for (const [i, lib] of libs.entries()) {
+      const { version } = JSON.parse(await readFile(join(repoRoot, 'node_modules', lib, 'package.json'), 'utf8'));
+      const tag = tags[i];
+      assert.equal(tag.querySelector('.version').textContent, `v${version}`, `${page}: ${lib} tag should show the installed version`);
+      assert.equal(tag.getAttribute('href'), `https://www.npmjs.com/package/${lib}/v/${version}`, `${page}: ${lib} tag links the exact release on npm`);
+    }
+  }
+});
+
+test('version tags are mono, ink and paper — no chroma, the lib is a label not a live thing', async () => {
+  const css = await readFile(join(repoRoot, 'src', 'styles.css'), 'utf8');
+  const rule = css.match(/\.version-tag\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.ok(rule, '.version-tag rule should exist');
+  assert.match(rule, /var\(--font-mono\)/, 'tags are set in the mono face');
+  assert.match(rule, /var\(--stroke\)/, 'tags are outlined with the grid stroke');
+  assert.doesNotMatch(rule, /--token/, 'tags never use the live color at rest');
+});
