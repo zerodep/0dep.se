@@ -22,7 +22,7 @@
   "devDependencies": {
     "@0dep/bpmn-extensions": "^0.1.0",
     "@0dep/piso": "^5.1.0",
-    "@0dep/toc": "^1.0.0",
+    "@0dep/toc": "^2.0.0",
     "amqp-emulator": "^0.1.0",
     "bpmn-elements": "^18.0.24",
     "bpmn-js": "^18.24.0",
