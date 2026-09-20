@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.9.0 - 2026-09-20
+
+- dependencies: dmn-elements 0.3 and @0dep/bpmn-extensions 1.0 (ESM only, feelin no longer bundled), both on feelin 8 — temporal values in `/dmn/` and `/run/` results are feelin's own `FeelDate`, `FeelTime`, `FeelDateTime` and `FeelDuration` types instead of luxon objects, serialised as ISO 8601 strings, week durations and mixed-kind duration arithmetic are rejected, DMN TCK conformance rises to 89.0%; the bundles ship one feelin and the `temporal-polyfill` ponyfill, which hands over to the browser's native `Temporal` when there is one
+- dependencies: @0dep/toc 2.1, texample 1.1
+- `npm run toc` (and so `pretest`) runs with `--check`: a README link to an anchor without a target fails the run instead of only warning
+
 ## v1.8.0 - 2026-09-19
 
 - runner pages (`/run/`, `/dmn/`, `/tools/`, `/toc/`) carry version tags under the heading: one per bundled lib, showing the installed version read from `node_modules` at build time and linking the exact release on npm — so you can tell which version of the lib you are testing

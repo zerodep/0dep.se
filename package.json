@@ -1,6 +1,6 @@
 {
   "name": "zerodep-web",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
@@ -12,7 +12,7 @@
     "test:md": "texample",
     "serve": "node src/serve.js",
     "mcp": "node src/mcp-server.js",
-    "toc": "toc README.md"
+    "toc": "toc -c README.md"
   },
   "engines": {
     "node": ">=26"
@@ -20,7 +20,7 @@
   "license": "MIT",
   "author": "Pål Edman",
   "devDependencies": {
-    "@0dep/bpmn-extensions": "^0.1.0",
+    "@0dep/bpmn-extensions": "^1.0.0",
     "@0dep/piso": "^5.1.0",
     "@0dep/toc": "^2.0.0",
     "amqp-emulator": "^0.1.0",
@@ -29,7 +29,7 @@
     "bpmn-moddle": "^10.1.0",
     "camunda-bpmn-moddle": "^8.0.1",
     "croner": "^10.0.1",
-    "dmn-elements": "^0.2.0",
+    "dmn-elements": "^0.3.0",
     "dmn-moddle": "^12.0.1",
     "esbuild": "^0.28.2",
     "happy-dom": "^20.10.6",
