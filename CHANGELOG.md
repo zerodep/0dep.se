@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.1 - 2026-09-21
+
+- bump feelin@8.2
+
 ## v1.9.0 - 2026-09-20
 
 - dependencies: dmn-elements 0.3 and @0dep/bpmn-extensions 1.0 (ESM only, feelin no longer bundled), both on feelin 8 — temporal values in `/dmn/` and `/run/` results are feelin's own `FeelDate`, `FeelTime`, `FeelDateTime` and `FeelDuration` types instead of luxon objects, serialised as ISO 8601 strings, week durations and mixed-kind duration arithmetic are rejected, DMN TCK conformance rises to 89.0%; the bundles ship one feelin and the `temporal-polyfill` ponyfill, which hands over to the browser's native `Temporal` when there is one
