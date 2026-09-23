@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.10.0 - 2026-09-23
+
+- runner service workers (`/run/`, `/dmn/`, `/tools/`, `/toc/`) are network-first: online visits get the current deploy without a hard refresh, and the cache is only the offline fallback. Precaching and refreshing bypass the browser's HTTP cache (GitHub Pages sends `max-age=600`), which could make a new worker store the previous deploy under its new cache name
+- the service worker version hashes every precached file, so a deploy that only touches shared styles, fonts, favicons or example files still ships a new worker; the workers are written last in the build, after those files are in `dist/`
+- dependencies: bpmn-elements 18.1.0 (now `latest`; range raised to `^18.1.0`), bpmn-js 18.29 (bpmn-moddle 10.3, dmn-moddle 12.2, moddle-xml 12.3)
+
 ## v1.9.1 - 2026-09-21
 
 - bump feelin@8.2

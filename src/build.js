@@ -1,6 +1,7 @@
 import { readFile, readdir, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { build as bundleJs } from 'esbuild';
 
 const CRC_TABLE = (() => {
@@ -977,15 +978,22 @@ ${ldBlocks}
 }
 
 /**
- * Cache-first service worker so /run/ works offline. The cache name carries a
- * content hash — a new deploy installs a fresh cache and drops the old one.
+ * Network-first service worker so the runner pages work offline without pinning
+ * visitors to an old deploy. The cache name carries a content hash of every
+ * precached file — a new deploy installs a fresh cache and drops the old one.
+ * Precache and refresh bypass the HTTP cache (GitHub Pages sends max-age=600),
+ * otherwise a new worker could store the previous deploy under its new name.
  */
 function renderServiceWorker(assets, version, prefix = 'run') {
   return `const CACHE = '${prefix}-${version}';
 const ASSETS = ${JSON.stringify(assets, null, 1)};
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -998,11 +1006,36 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const precached = url.origin === self.location.origin && ASSETS.includes(url.pathname);
+  // navigations can't be re-wrapped; they already revalidate on reload
+  const request = e.request.mode === 'navigate' ? e.request : new Request(e.request, { cache: 'no-cache' });
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request))
+    fetch(request)
+      .then((res) => {
+        if (precached && res.ok) {
+          const copy = res.clone();
+          e.waitUntil(caches.open(CACHE).then((cache) => cache.put(e.request, copy)));
+        }
+        return res;
+      })
+      .catch((err) => caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || Promise.reject(err)))
   );
 });
 `;
+}
+
+/**
+ * Service worker version: a hash over every precached file, so a change to any
+ * of them — shared styles and fonts included — ships a new worker.
+ */
+async function serviceWorkerVersion(assets) {
+  const hash = createHash('sha256');
+  for (const url of assets) {
+    if (url.endsWith('/')) continue; // the directory URL serves index.html, listed separately
+    hash.update(await readFile(join(distDir, url)));
+  }
+  return hash.digest('hex').slice(0, 12);
 }
 
 function render404(site) {
@@ -1154,13 +1187,6 @@ export async function build() {
     '/favicon-32.png',
     '/favicon-192.png',
   ];
-  const swVersion = crc32(
-    Buffer.concat(await Promise.all([
-      readFile(join(distDir, 'run', 'app.js')),
-      readFile(join(distDir, 'run', 'index.html')),
-    ])),
-  ).toString(16);
-  await writeFile(join(distDir, 'run', 'sw.js'), renderServiceWorker(runAssets, swVersion));
 
   // the /dmn/ evaluator page — same treatment, its own bundle and offline cache
   await writeFile(join(distDir, 'dmn', 'index.html'), renderDmn(manifest.site, versions));
@@ -1184,13 +1210,6 @@ export async function build() {
     '/favicon-32.png',
     '/favicon-192.png',
   ];
-  const dmnSwVersion = crc32(
-    Buffer.concat(await Promise.all([
-      readFile(join(distDir, 'dmn', 'app.js')),
-      readFile(join(distDir, 'dmn', 'index.html')),
-    ])),
-  ).toString(16);
-  await writeFile(join(distDir, 'dmn', 'sw.js'), renderServiceWorker(dmnAssets, dmnSwVersion, 'dmn'));
   // the /tools/ playground — piso + ocrgenerator, one small bundle, own offline cache
   await writeFile(join(distDir, 'tools', 'index.html'), renderTools(manifest.site, versions));
   await bundleJs({
@@ -1211,13 +1230,6 @@ export async function build() {
     '/favicon-32.png',
     '/favicon-192.png',
   ];
-  const toolsSwVersion = crc32(
-    Buffer.concat(await Promise.all([
-      readFile(join(distDir, 'tools', 'app.js')),
-      readFile(join(distDir, 'tools', 'index.html')),
-    ])),
-  ).toString(16);
-  await writeFile(join(distDir, 'tools', 'sw.js'), renderServiceWorker(toolsAssets, toolsSwVersion, 'tools'));
   // the /toc/ generator — @0dep/toc, one small bundle, own offline cache
   await writeFile(join(distDir, 'toc', 'index.html'), renderTocPage(manifest.site, versions));
   await bundleJs({
@@ -1240,13 +1252,6 @@ export async function build() {
     '/favicon-32.png',
     '/favicon-192.png',
   ];
-  const tocSwVersion = crc32(
-    Buffer.concat(await Promise.all([
-      readFile(join(distDir, 'toc', 'app.js')),
-      readFile(join(distDir, 'toc', 'index.html')),
-    ])),
-  ).toString(16);
-  await writeFile(join(distDir, 'toc', 'sw.js'), renderServiceWorker(tocAssets, tocSwVersion, 'toc'));
   await writeFile(join(distDir, '404.html'), render404(manifest.site));
   await copyFile(stylesSrc, join(distDir, 'styles.css'));
   for (const f of copyAssets) {
@@ -1271,6 +1276,11 @@ export async function build() {
     images: { '/': [manifest.site.ogImage], '/about/': [profile.avatar] },
   }));
   await writeFile(join(distDir, 'llms.txt'), llmsTxt(manifest));
+
+  // service workers last — their versions hash the shared styles, fonts and favicons copied above
+  for (const [page, assets] of [['run', runAssets], ['dmn', dmnAssets], ['tools', toolsAssets], ['toc', tocAssets]]) {
+    await writeFile(join(distDir, page, 'sw.js'), renderServiceWorker(assets, await serviceWorkerVersion(assets), page));
+  }
 
   // Mirror static/ verbatim — site-verification HTML files, well-known endpoints, etc.
   let staticFiles = [];
