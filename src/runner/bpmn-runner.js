@@ -8,152 +8,15 @@ import { extensions, extendFn, FeelExpressions, FeelScripts, TimerEventDefinitio
 import zeebeSchema from 'zeebe-bpmn-moddle/resources/zeebe.json' with { type: 'json' };
 import camundaSchema from 'camunda-bpmn-moddle/resources/camunda.json' with { type: 'json' };
 
-// the extension pack's TimerEventDefinition also takes cron timeCycles (Camunda 8 timer start events)
+// cron-capable timer definition
 const typeResolver = TypeResolver({ ...elements, TimerEventDefinition });
 
 const CAMUNDA7_NS = 'http://camunda.org/schema/1.0/bpmn';
-
-/**
- * The zeebe and camunda 7 moddle schemas both extend the same BPMN types with
- * an identical `modelerTemplate` property, so moddle refuses to register them
- * together. A diagram targets one platform, so pick the schema its xmlns
- * declares — zeebe when both or neither appear.
- */
-function createModdle(source) {
-  if (source.includes(CAMUNDA7_NS) && !source.includes('http://camunda.org/schema/zeebe/1.0')) {
-    return new BpmnModdle({ camunda: camundaSchema });
-  }
-  return new BpmnModdle({ zeebe: zeebeSchema });
-}
-
+const ZEEBE_NS = 'http://camunda.org/schema/zeebe/1.0';
 const BYPASSABLE_TYPES = new Set(['bpmn:UserTask', 'bpmn:ManualTask']);
 
 /**
- * Wrap user-supplied services so any unregistered service type resolves to a
- * stub that completes the job with no variables — a pasted diagram with
- * arbitrary zeebe:taskDefinition types should run to completion, not stall.
- */
-function stubbedServices(services = {}, onServiceCall) {
-  return new Proxy({ ...services }, {
-    get(target, name) {
-      if (name in target) return target[name];
-      if (typeof name !== 'string') return undefined;
-      return function serviceStub(elementApi, callback) {
-        onServiceCall?.(name, elementApi);
-        callback(null, {});
-      };
-    },
-  });
-}
-
-/**
- * FeelScripts, but scripts it cannot compile (camunda 7 groovy/JavaScript
- * bodies, or any script task without a zeebe:script) run through instead of
- * emitting a fatal "unsupported script format" error.
- */
-function passThroughScripts() {
-  const feel = FeelScripts();
-  const passThrough = {
-    execute(_scope, callback) {
-      callback(null);
-    },
-  };
-  return {
-    register(activity) {
-      return feel.register(activity);
-    },
-    getScript(scriptFormat, activity) {
-      const script = feel.getScript(scriptFormat, activity);
-      if (script) return script;
-      // Only script tasks pass through — sequence-flow conditions and event
-      // definitions also come through here and must fall back to expression
-      // evaluation, not be swallowed by a script that returns nothing.
-      if (activity.type === 'bpmn:ScriptTask') return passThrough;
-      return undefined;
-    },
-  };
-}
-
-/**
- * Per-expression language pick, keyed on the body's own marker: a leading `=`
- * means FEEL (zeebe convention), `${...}` means a camunda 7 style template
- * resolved by bpmn-elements' default engine (property paths and service calls
- * against `environment`/message — not arbitrary operators), anything else is
- * a literal.
- */
-function hybridExpressions() {
-  const feel = FeelExpressions();
-  const templates = elements.Expressions();
-  return {
-    resolveExpression(expression, context, expressionFnContext) {
-      if (typeof expression === 'string' && !feel.isExpression(expression) && templates.hasExpression(expression)) {
-        return templates.resolveExpression(expression, context, expressionFnContext);
-      }
-      return feel.resolveExpression(expression, context);
-    },
-    isExpression: (text) => feel.isExpression(text) || templates.isExpression(text),
-    hasExpression: (text) => feel.hasExpression(text) || templates.hasExpression(text),
-  };
-}
-
-/**
- * A sequence-flow condition whose body carries neither expression marker
- * degrades to a constant truthy string — almost always a mistake, so surface
- * it before the run starts.
- */
-function warnLiteralConditions(context, onWarning) {
-  const feel = FeelExpressions();
-  const templates = elements.Expressions();
-  for (const flow of context.getSequenceFlows()) {
-    const body = flow.behaviour?.conditionExpression?.body;
-    if (typeof body !== 'string' || !body.trim()) continue;
-    if (feel.isExpression(body) || templates.hasExpression(body)) continue;
-    onWarning(
-      `condition on <${flow.id}> is neither FEEL (leading =) nor a \${...} template — the flow is always taken`,
-    );
-  }
-}
-
-/**
- * List the decisions (and decision services) of a DMN source as `{ id, name }`,
- * for presenting what a dropped file provides.
- */
-export async function listDmnDecisions(source) {
-  return listDecisions(await parseDmn(source)).map(({ id, name }) => ({ id, name }));
-}
-
-/**
- * Build one environment service per decision (and decision service) in the
- * given DMN sources — a business rule task's `zeebe:calledDecision` dispatches
- * to a service named by its decision id. The decision evaluates with the
- * current process variables (and any input mapping) as input; later sources
- * win on id clashes. The BPMN environment's own services ride along so FEEL
- * inside a decision can invoke them as `services.<name>`.
- * Evaluation logs are forwarded to onDmnLog as `{ scope, level, message }`.
- */
-async function dmnDecisionServices(dmnSources, onDmnLog, services) {
-  const Logger = onDmnLog && forwardingLogger(onDmnLog);
-
-  const decisionServices = {};
-  for (const source of dmnSources) {
-    const rootElement = await parseDmn(source);
-    const definition = new DmnDefinition(new DmnContext(rootElement, new DmnEnvironment({ Logger, services })));
-    for (const { id } of listDecisions(rootElement)) {
-      decisionServices[id] = function evaluateDecision(executionMessage, callback) {
-        const input = { ...this?.environment?.variables, ...executionMessage?.content?.input };
-        onDmnLog?.({ scope: 'dmn:decision', level: 'debug', message: `<${id}> input ${JSON.stringify(input, null, 1).replace(/\n\s*/g, ' ')}` });
-        definition.evaluate(id, input, callback);
-      };
-    }
-  }
-  return decisionServices;
-}
-
-/**
- * Parse BPMN 2.0 XML (zeebe and camunda 7 namespaces supported) and wire a
- * runnable bpmn-elements Definition with @0dep/bpmn-extensions.
- * Camunda 7 service tasks (class, delegateExpression, external topic) run
- * through via bpmn-elements' dummy service.
+ * Parse BPMN 2.0 XML (zeebe or camunda 7) into a runnable bpmn-elements Definition.
  * @param {string} source BPMN 2.0 XML
  * @param {object} [options]
  * @param {object} [options.variables] initial environment variables
@@ -168,7 +31,7 @@ export async function createDefinition(source, options = {}) {
   const { variables, onServiceCall, step, dmn, onDmnLog, onWarning } = options;
   const takeOnce = makeTakeHelper(1);
   const takeTwice = makeTakeHelper(2);
-  const userServices = { takeOnce, takeTwice, ...options.services };
+  const userServices = { takeOnce, takeTwice, delay, ...options.services };
   const services = {
     ...(dmn?.length ? await dmnDecisionServices(dmn, onDmnLog, userServices) : undefined),
     ...userServices,
@@ -176,7 +39,16 @@ export async function createDefinition(source, options = {}) {
 
   const moddleContext = await createModdle(String(source)).fromXML(String(source));
   const serialized = Serializer(moddleContext, typeResolver, extendFn);
-  const context = new elements.Context(serialized);
+  const environment = new elements.Environment({
+    // merges signal output of plain elements @0dep/bpmn-extensions skips
+    settings: { enableDummyService: true, step: Boolean(step), assignOutput: 'auto' },
+    expressions: hybridExpressions(),
+    scripts: passThroughScripts(),
+    extensions: { flowExtensions: extensions },
+    variables: { takeOnce, takeTwice, ...variables },
+    services: stubbedServices(services, onServiceCall),
+  });
+  const context = new elements.Context(serialized, environment);
 
   if (!context.getExecutableProcesses().length) {
     throw new Error('diagram has no executable process (set isExecutable="true")');
@@ -184,52 +56,24 @@ export async function createDefinition(source, options = {}) {
 
   if (onWarning) warnLiteralConditions(context, onWarning);
 
-  const definition = new elements.Definition(context, {
-    // @0dep/bpmn-extensions skips elements without zeebe extension data, so a
-    // plain user task signaled with a JSON payload would otherwise drop it —
-    // `assignOutput: 'auto'` lets bpmn-elements merge such output itself
-    settings: { enableDummyService: true, step: Boolean(step), assignOutput: 'auto' },
-    expressions: hybridExpressions(),
-    scripts: passThroughScripts(),
-    extensions: { flowExtensions: extensions },
-    // the take helpers ride along as variables so FEEL conditions can invoke
-    // them; user variables win on name clashes
-    variables: { takeOnce, takeTwice, ...variables },
-    services,
-  });
-
-  // Environment#clone spreads options.services into a fresh object, which would
-  // strip the proxy's get trap — install it on the registry symbol afterwards
-  // instead. Subsequent clones pass the registry by reference, so process and
-  // activity environments resolve stubs too.
-  definition.environment[Symbol.for('services')] = stubbedServices(services, onServiceCall);
+  const definition = new elements.Definition(context);
 
   return definition;
 }
 
 /**
- * Run a wired Definition. Every bubbled engine event is forwarded to onEvent
- * as `{ event, id, type, name }`; wait events also carry the element `api`
- * so the caller can signal (user tasks, signals, message catches).
- * With `autoSignal`, waiting user and manual tasks are signaled immediately
- * (the forwarded entry is marked `autoSignaled`); other waits still need the api.
- * Resolves `{ output, events, definition, stats }` when the definition leaves
- * (with `stopped: true` when it was stopped instead of running to the end) —
- * stats being `{ duration, activities: [{ id, type, name, runs, totalMs }] }`
- * where totalMs sums enter-to-leave per activity (waiting time included) over
- * all its runs.
- * Diagrams can be circular — when an activity's run counters show it has been
- * touched more than `maxTouches` times the definition is stopped and the run
- * rejects, instead of looping forever. Step mode is exempt: every advance is a
- * deliberate click, so the user decides when a circular run has gone on long enough.
+ * Run a Definition, forwarding every engine event to onEvent. Resolves
+ * `{ output, events, definition, stats }` when it leaves, with `stopped: true`
+ * when stopped; rejects on error or a suspected infinite loop.
  * @param {object} definition
  * @param {object} [options]
  * @param {(entry: {event: string, id: string, type: string, name?: string, api?: object, autoSignaled?: boolean}) => void} [options.onEvent]
  * @param {boolean} [options.autoSignal] bypass user and manual tasks
- * @param {number} [options.maxTouches] per-activity touch limit before the run is considered an infinite loop, defaults to 10
+ * @param {number} [options.maxTouches] per-activity touch limit outside step mode, defaults to 10
+ * @param {boolean} [options.resume] resume a recovered definition (see switchStepMode) instead of running it
  */
 export function runDefinition(definition, options = {}) {
-  const { onEvent, autoSignal, maxTouches = 10 } = options;
+  const { onEvent, autoSignal, maxTouches = 10, resume } = options;
   return new Promise((resolve, reject) => {
     const events = [];
     const consumerTag = 'runner-events';
@@ -251,8 +95,6 @@ export function runDefinition(definition, options = {}) {
       (routingKey, message) => {
         const { id, type, name, executionId, accepts } = message.content;
         const entry = { event: routingKey, id, type, name };
-        // which api messages the element acts on while postponed — drives
-        // whether Signal/Cancel make sense for this entry
         if (accepts) entry.accepts = accepts;
         if (routingKey === 'activity.timer') {
           entry.timeout = message.content.timeout;
@@ -260,7 +102,8 @@ export function runDefinition(definition, options = {}) {
         }
 
         if (routingKey === 'activity.leave') {
-          const enteredAt = runStarts.get(executionId);
+          // in flight when resumed — its enter happened in the stopped run
+          const enteredAt = runStarts.get(executionId) ?? (resume ? startedAt : undefined);
           if (enteredAt !== undefined) {
             runStarts.delete(executionId);
             let activityStats = perActivity.get(id);
@@ -274,8 +117,7 @@ export function runDefinition(definition, options = {}) {
           if (!definition.environment.settings.step) {
             const counters = definition.getApi(message)?.owner?.counters;
             if (counters && counters.taken + counters.discarded >= maxTouches) {
-              // settle first — it cancels the consumer, so the definition.stop
-              // event emitted by stop() cannot re-enter and resolve as stopped
+              // settle first, so the stop event cannot resolve the run as stopped
               settle(reject, new Error(`possible infinite loop — <${id}> touched more than ${maxTouches} times, run stopped`));
               definition.stop();
               return;
@@ -318,17 +160,21 @@ export function runDefinition(definition, options = {}) {
 
     try {
       startedAt = performance.now();
-      definition.run();
+      if (resume) definition.resume();
+      else definition.run();
     } catch (err) {
       settle(reject, err);
     }
   });
 }
 
-/**
- * Advance a step-mode run: nudge each postponed element of every running
- * process one run-step. Returns true if anything advanced.
- */
+/** Parse, wire and run a BPMN source in one call — takes both createDefinition and runDefinition options. */
+export async function runBpmn(source, options = {}) {
+  const definition = await createDefinition(source, options);
+  return runDefinition(definition, options);
+}
+
+/** Advance a step-mode run one step. Returns true if anything advanced. */
 export function stepDefinition(definition) {
   let advanced = false;
   for (const bp of definition.getRunningProcesses() || []) {
@@ -337,17 +183,142 @@ export function stepDefinition(definition) {
   return advanced;
 }
 
+/** Stop a run so it can be resumed with runDefinition(..., { resume: true }). */
+export function stopDefinition(definition) {
+  if (definition.environment.settings.step) settleExecuted(definition);
+  definition.stop();
+}
+
+/**
+ * Stop a running definition and recover it in or out of step mode — pass the
+ * result to runDefinition with `resume: true` to carry on.
+ * @param {object} definition the running definition
+ * @param {string} source the BPMN source the definition was created from
+ * @param {boolean} step step mode for the rest of the run
+ * @param {object} [options] the createDefinition options the run was created with
+ */
+export async function switchStepMode(definition, source, step, options = {}) {
+  // step is cloned into every process environment, so it can't be flipped in place
+  const next = await createDefinition(source, { ...options, step });
+  if (definition.environment.settings.step) settleExecuted(definition);
+  const state = withStepSetting(definition.getState(), Boolean(step));
+  definition.stop();
+  return next.recover(state);
+}
+
+/** List the decisions and decision services of a DMN source as `{ id, name }`. */
+export async function listDmnDecisions(source) {
+  return listDecisions(await parseDmn(source)).map(({ id, name }) => ({ id, name }));
+}
+
+/** A moddle with the zeebe or camunda 7 schema, whichever the source declares — zeebe by default. */
+function createModdle(source) {
+  // the schemas clash on `modelerTemplate`, so moddle can't register both
+  if (source.includes(CAMUNDA7_NS) && !source.includes(ZEEBE_NS)) {
+    return new BpmnModdle({ camunda: camundaSchema });
+  }
+  return new BpmnModdle({ zeebe: zeebeSchema });
+}
+
+/** One service per DMN decision, named by decision id, evaluated with the process variables as input. */
+async function dmnDecisionServices(dmnSources, onDmnLog, services) {
+  const Logger = onDmnLog && forwardingLogger(onDmnLog);
+
+  const decisionServices = {};
+  for (const source of dmnSources) {
+    const rootElement = await parseDmn(source);
+    const definition = new DmnDefinition(new DmnContext(rootElement, new DmnEnvironment({ Logger, services })));
+    for (const { id } of listDecisions(rootElement)) {
+      decisionServices[id] = function evaluateDecision(executionMessage, callback) {
+        const input = { ...this?.environment?.variables, ...executionMessage?.content?.input };
+        onDmnLog?.({ scope: 'dmn:decision', level: 'debug', message: `<${id}> input ${JSON.stringify(input, null, 1).replace(/\n\s*/g, ' ')}` });
+        definition.evaluate(id, input, callback);
+      };
+    }
+  }
+  return decisionServices;
+}
+
+/** Warn about flow conditions that are neither FEEL nor a template — they are always taken. */
+function warnLiteralConditions(context, onWarning) {
+  const feel = FeelExpressions();
+  const templates = elements.Expressions();
+  for (const flow of context.getSequenceFlows()) {
+    const body = flow.behaviour?.conditionExpression?.body;
+    if (typeof body !== 'string' || !body.trim()) continue;
+    if (feel.isExpression(body) || templates.hasExpression(body)) continue;
+    onWarning(
+      `condition on <${flow.id}> is neither FEEL (leading =) nor a \${...} template — the flow is always taken`,
+    );
+  }
+}
+
+/** Expressions resolved as FEEL (leading `=`) or camunda 7 `${...}` templates, anything else a literal. */
+function hybridExpressions() {
+  const feel = FeelExpressions();
+  const templates = elements.Expressions();
+  return {
+    resolveExpression(expression, context, expressionFnContext) {
+      if (typeof expression === 'string' && !feel.isExpression(expression) && templates.hasExpression(expression)) {
+        return templates.resolveExpression(expression, context, expressionFnContext);
+      }
+      return feel.resolveExpression(expression, context);
+    },
+    isExpression: (text) => feel.isExpression(text) || templates.isExpression(text),
+    hasExpression: (text) => feel.hasExpression(text) || templates.hasExpression(text),
+  };
+}
+
+/** FEEL scripts, with script tasks in other formats running through instead of failing. */
+function passThroughScripts() {
+  const feel = FeelScripts();
+  const passThrough = {
+    execute(_scope, callback) {
+      callback(null);
+    },
+  };
+  return {
+    register(activity) {
+      return feel.register(activity);
+    },
+    getScript(scriptFormat, activity) {
+      const script = feel.getScript(scriptFormat, activity);
+      if (script) return script;
+      // conditions and event definitions fall back to expression evaluation
+      if (activity.type === 'bpmn:ScriptTask') return passThrough;
+      return undefined;
+    },
+  };
+}
+
+/** Services where any unregistered name resolves to a stub that completes with no variables. */
+function stubbedServices(services = {}, onServiceCall) {
+  return new Proxy({ ...services }, {
+    get(target, name) {
+      if (name in target) return target[name];
+      if (typeof name !== 'string') return undefined;
+      return function serviceStub(elementApi, callback) {
+        onServiceCall?.(name, elementApi);
+        callback(null, {});
+      };
+    },
+  });
+}
+
+/**
+ * `delay` service: completes after a 1 ms timeout.
+ * @this {import('bpmn-elements').Activity}
+ */
+function delay(_elementApi, callback) {
+  this.environment.timers.register(this).setTimeout(callback, 1, null, {});
+}
+
 function stepPostponed(postponed, activityScope) {
   let advanced = false;
   for (const api of postponed) {
     const owner = api.owner;
 
-    // a sub-process carries its own postponed elements with their own run
-    // queues — recurse before nudging the sub-process activity itself. Its
-    // getPostponed() includes apis for the sub-process's own execution, which
-    // would recurse forever — only descend into actual inner elements. The
-    // inner process executions resolve endpoint activities of parked inner
-    // loop-back flows.
+    // its own execution is among the postponed apis — only descend into inner elements
     if (owner.isSubProcess && typeof api.getPostponed === 'function') {
       const inner = api.getPostponed().filter((sub) => sub.owner !== owner);
       if (stepPostponed(inner, subProcessScope(owner))) advanced = true;
@@ -358,9 +329,7 @@ function stepPostponed(postponed, activityScope) {
       continue;
     }
 
-    // a looped sequence flow parks postponed until its endpoints drain their
-    // run queues (e.g. the target's unacked run.leave from its previous run)
-    // — flows have no next(), so nudge the activities on either end
+    // a looped flow has no next() — nudge the activities on either end
     if (!activityScope) continue;
     for (const activityId of [owner.sourceId, owner.targetId]) {
       const activity = activityId && activityScope.getActivityById(activityId);
@@ -385,11 +354,26 @@ function subProcessScope(subProcess) {
   };
 }
 
-/**
- * Convenience: parse, wire, and run a BPMN source in one call.
- * Takes the union of createDefinition and runDefinition options.
- */
-export async function runBpmn(source, options = {}) {
-  const definition = await createDefinition(source, options);
-  return runDefinition(definition, options);
+/** Step every activity parked at `executed` on to `end` before a stop or state capture. */
+function settleExecuted(definition) {
+  // bpmn-elements 18.1: resumed at `executed`, the activity stays `executing` for good
+  for (const bp of definition.getRunningProcesses() || []) settleExecutedPostponed(bp.getPostponed());
+}
+
+function settleExecutedPostponed(postponed) {
+  for (const api of postponed) {
+    const owner = api.owner;
+    if (owner.isSubProcess && typeof api.getPostponed === 'function') {
+      settleExecutedPostponed(api.getPostponed().filter((sub) => sub.owner !== owner));
+    }
+    if (owner.status === 'executed') owner.next?.();
+  }
+}
+
+/** Set `step` in every environment settings of a captured state. */
+function withStepSetting(state, step) {
+  if (!state || typeof state !== 'object') return state;
+  if (state.settings && 'step' in state.settings) state.settings.step = step;
+  for (const value of Object.values(state)) withStepSetting(value, step);
+  return state;
 }

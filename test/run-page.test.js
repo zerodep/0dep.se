@@ -298,3 +298,8 @@ test('sitemap lists /run/', async () => {
   const sitemap = await readFile(join(distDir, 'sitemap.xml'), 'utf8');
   assert.ok(sitemap.includes(`<loc>https://${manifest.site.primaryDomain}/run/</loc>`));
 });
+
+test('run page hint documents the delay service', () => {
+  const hints = [...runDoc.querySelectorAll('.hint')].map((p) => p.textContent).join(' ');
+  assert.match(hints, /delay/, 'hint should mention the delay service task type');
+});

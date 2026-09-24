@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 
 const resources = join(dirname(fileURLToPath(import.meta.url)), 'resources');
 
-import { runBpmn, createDefinition, runDefinition, stepDefinition, listDmnDecisions } from '../src/runner/bpmn-runner.js';
+import { runBpmn, createDefinition, runDefinition, stepDefinition, stopDefinition, switchStepMode, listDmnDecisions } from '../src/runner/bpmn-runner.js';
 
 const SIMPLE_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_1" targetNamespace="http://bpmn.io/schema/bpmn">
@@ -602,6 +602,121 @@ test('step mode is exempt from the touch limit', async () => {
   definition.stop();
 });
 
+test('switchStepMode takes a stepped run through to the end', async () => {
+  const definition = await createDefinition(SIMPLE_SOURCE, { step: true });
+  const first = runDefinition(definition);
+  stepDefinition(definition);
+  stepDefinition(definition);
+
+  const next = await switchStepMode(definition, SIMPLE_SOURCE, false);
+  assert.equal((await first).stopped, true, 'the stepped run should settle as stopped');
+  assert.notEqual(next, definition, 'a fresh definition should carry on');
+
+  const { stopped, events } = await runDefinition(next, { resume: true });
+  assert.equal(stopped, undefined, 'the recovered run should complete by itself');
+  assert.equal(events.at(-1).event, 'definition.leave');
+  assert.ok(events.some((e) => e.event === 'activity.end' && e.id === 'end'), 'should reach the end event');
+});
+
+test('switchStepMode resumes a stepped run from wherever it was parked', async () => {
+  for (let steps = 0; steps <= 8; steps++) {
+    const definition = await createDefinition(SIMPLE_SOURCE, { step: true });
+    runDefinition(definition).catch(() => {});
+    for (let i = 0; i < steps; i++) stepDefinition(definition);
+
+    const next = await switchStepMode(definition, SIMPLE_SOURCE, false);
+    const result = await Promise.race([
+      runDefinition(next, { resume: true }),
+      new Promise((resolve) => setTimeout(resolve, 500, 'stalled')),
+    ]);
+    assert.notEqual(result, 'stalled', `run switched after ${steps} steps should complete`);
+    assert.equal(result.events.at(-1).event, 'definition.leave');
+  }
+});
+
+test('a stopped step-mode run resumes stepping from wherever it was parked', async () => {
+  for (let steps = 0; steps <= 8; steps++) {
+    const definition = await createDefinition(SIMPLE_SOURCE, { step: true });
+    const first = runDefinition(definition);
+    for (let i = 0; i < steps; i++) stepDefinition(definition);
+    stopDefinition(definition);
+    assert.equal((await first).stopped, true);
+
+    let finished = false;
+    const done = runDefinition(definition, { resume: true }).then((result) => {
+      finished = true;
+      return result;
+    });
+    let guard = 50;
+    while (!finished && guard--) {
+      stepDefinition(definition);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    assert.equal(finished, true, `run stopped after ${steps} steps should step to the end once resumed`);
+    assert.equal((await done).events.at(-1).event, 'definition.leave');
+  }
+});
+
+test('switchStepMode puts a running run into step mode, keeping its waits', async () => {
+  const definition = await createDefinition(USER_TASK_SOURCE);
+  let firstWait;
+  const first = runDefinition(definition, {
+    onEvent(e) {
+      if (e.event === 'activity.wait') firstWait = e;
+    },
+  });
+  assert.ok(firstWait, 'the run should wait at the user task');
+
+  const next = await switchStepMode(definition, USER_TASK_SOURCE, true);
+  assert.equal((await first).stopped, true);
+
+  let waitApi;
+  let finished = false;
+  const done = runDefinition(next, {
+    resume: true,
+    onEvent(e) {
+      if (e.event === 'activity.wait') waitApi = e.api;
+    },
+  }).then((result) => {
+    finished = true;
+    return result;
+  });
+  assert.ok(waitApi, 'resume should surface the wait again with a live api');
+
+  waitApi.signal({ approved: true });
+  await Promise.resolve();
+  assert.equal(finished, false, 'the recovered run should be in step mode');
+
+  let guard = 200;
+  while (!finished && guard--) {
+    stepDefinition(next);
+    await Promise.resolve();
+  }
+  const { output } = await done;
+  assert.equal(output.approved, true);
+});
+
+test('switchStepMode keeps the variables and services the run was created with', async () => {
+  const options = { step: true, variables: { order: { total: 250 } } };
+  const definition = await createDefinition(SIMPLE_SOURCE, options);
+  runDefinition(definition).catch(() => {});
+  stepDefinition(definition);
+
+  const next = await switchStepMode(definition, SIMPLE_SOURCE, false, options);
+  const { output } = await runDefinition(next, { resume: true });
+  assert.ok(next.environment.variables.order, 'recovered variables should survive');
+  assert.equal(typeof output, 'object');
+});
+
+test('the touch limit applies again once a stepped run is switched to run through', async () => {
+  const definition = await createDefinition(CIRCULAR_SOURCE, { step: true });
+  runDefinition(definition).catch(() => {});
+  for (let i = 0; i < 4; i++) stepDefinition(definition);
+
+  const next = await switchStepMode(definition, CIRCULAR_SOURCE, false);
+  await assert.rejects(runDefinition(next, { resume: true }), /loop/i);
+});
+
 test('bounded loops under the touch limit still complete', async () => {
   // start → a → b → gateway: loops back to a until count >= 3, then ends
   const bounded = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1005,6 +1120,42 @@ test('takeTwice as a zeebe service drives loops via the taken variable', async (
   assert.equal(events.at(-1).event, 'definition.leave');
   // taken=true twice (loops back), third call taken=false → exit
   assert.equal(events.filter((e) => e.event === 'activity.enter' && e.id === 'poll').length, 3);
+});
+
+test('delay is a registered service that completes after a 1 ms timeout', async () => {
+  const source = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Def_delay" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="waiting" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="to-pause" sourceRef="start" targetRef="pause" />
+    <serviceTask id="pause">
+      <extensionElements>
+        <zeebe:taskDefinition type="delay" />
+      </extensionElements>
+    </serviceTask>
+    <sequenceFlow id="to-end" sourceRef="pause" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+  const stubbed = [];
+  const definition = await createDefinition(source, { onServiceCall: (name) => stubbed.push(name) });
+  let finished = false;
+  const done = runDefinition(definition).then((result) => {
+    finished = true;
+    return result;
+  });
+
+  await Promise.resolve();
+  assert.equal(finished, false, 'delay should complete on a timer, not synchronously');
+  const [timer] = definition.environment.timers.executing;
+  assert.ok(timer, 'delay should run its timeout through the environment timers');
+  assert.equal(timer.delay, 1);
+  const started = performance.now();
+  const { events } = await done;
+  assert.ok(performance.now() - started >= 0.5, 'delay should wait for its timeout');
+  assert.equal(events.at(-1).event, 'definition.leave');
+  assert.deepEqual(stubbed, [], 'delay should not fall through to the service stub');
 });
 
 test('user services override the take helpers', async () => {

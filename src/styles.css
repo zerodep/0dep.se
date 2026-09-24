@@ -351,6 +351,8 @@ main.profile {
 .run-input.dragging { border-color: var(--accent); outline: 2px dashed var(--accent); outline-offset: -6px; }
 .run-input label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; }
 .run-input textarea.variables { min-height: 4rem; margin-bottom: 0.25rem; }
+.run-input textarea.variables.invalid { border-color: #c0392b; outline-color: #c0392b; }
+.run-input .field-error { margin: 0 0 0.25rem; font-size: 0.82rem; color: #c0392b; }
 .run-input label + textarea { margin-top: 0; }
 .run-input textarea + label { margin-top: 1rem; }
 .run-input textarea {

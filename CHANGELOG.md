@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.10.1 - 2026-09-24
+
+- `/run/`: step mode can be switched mid-run — unticking "Step through the run" while stepping enables Run (Step keeps working), and Run then goes the rest of the way through; ticking it while running through enables Step, and the first Step pauses the run in step mode. bpmn-elements clones the step setting into every process, so the switch captures the run's state with `step` flipped, stops it and resumes a recovered definition; the diagram, markers and counters carry on, waits come back with fresh Signal controls, stats span both sides and the loop guard applies again once running through
+- `/run/`: Stop and Resume buttons — Stop halts the run and keeps the diagram markers, counters and log; Resume carries on from where it stopped (in the mode the step checkbox asks for), with waits getting fresh Signal controls. Markers and counters only reset on the next Run; a new diagram forgets the stopped run
+- `/run/`: a `delay` service is registered for every run — use it as a service task type to complete after a 1 ms timeout, run through the engine's environment timers
+- runner works around a bpmn-elements 18.1 stall: a step-mode activity parked at `executed` is stepped on to `end` before a stop or state capture, since resuming it redelivers its unacked run.execute against the completed execution and it stays `executing`
+- `/run/`: the variables textarea is validated as you type — invalid JSON or a non-object marks it and shows the parse error beside it, before Run is pressed
+- dependencies: bpmn-js 18.30 (diagram-js 15.27)
+
 ## v1.10.0 - 2026-09-23
 
 - runner service workers (`/run/`, `/dmn/`, `/tools/`, `/toc/`) are network-first: online visits get the current deploy without a hard refresh, and the cache is only the offline fallback. Precaching and refreshing bypass the browser's HTTP cache (GitHub Pages sends `max-age=600`), which could make a new worker store the previous deploy under its new cache name

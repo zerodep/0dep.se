@@ -364,3 +364,225 @@ test('an invalid Signal payload does not signal and is marked invalid', async ()
   await waitFor(() => document.querySelector('#output').textContent);
   assert.match(document.querySelector('#output').textContent, /"approved": false/);
 });
+
+function change(el, checked) {
+  el.checked = checked;
+  el.dispatchEvent(new window.Event('change'));
+}
+
+const TASKS_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_uitasks" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="chores" isExecutable="true">
+    <startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="first" />
+    <task id="first" />
+    <sequenceFlow id="f2" sourceRef="first" targetRef="second" />
+    <task id="second" />
+    <sequenceFlow id="f3" sourceRef="second" targetRef="end" />
+    <endEvent id="end" />
+  </process>
+</definitions>`;
+
+test('unticking step mode mid-run offers Run, which goes the rest of the way through', async () => {
+  const stepMode = document.querySelector('#step-mode');
+  document.querySelector('#source').value = TASKS_SOURCE;
+  document.querySelector('#variables').value = '';
+  change(stepMode, true);
+  click(document.querySelector('#run'));
+
+  const stepBtn = document.querySelector('#step');
+  await waitFor(() => !stepBtn.disabled);
+  for (let i = 0; i < 6; i++) {
+    click(stepBtn);
+    await new Promise((r) => setTimeout(r, 1));
+  }
+  assert.equal(document.querySelector('#output').textContent, '', 'the stepped run should not have finished yet');
+
+  const runBtn = document.querySelector('#run');
+  assert.equal(runBtn.disabled, true, 'run should be disabled while stepping');
+  change(stepMode, false);
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(runBtn.disabled, false, 'unticking step mode should offer Run to go through');
+  assert.equal(stepBtn.disabled, false, 'step should keep working until Run is clicked');
+  assert.equal(document.querySelector('#output').textContent, '', 'unticking alone should not switch');
+
+  change(stepMode, true);
+  assert.equal(runBtn.disabled, true, 'ticking step mode again should withdraw Run');
+  change(stepMode, false);
+  click(stepBtn);
+  await new Promise((r) => setTimeout(r, 1));
+
+  click(runBtn);
+  await waitFor(() => document.querySelector('#output').textContent);
+
+  const log = [...document.querySelectorAll('#log li')].map((li) => li.textContent);
+  assert.ok(log.some((line) => /switched to run through/i.test(line)), 'log should note the switch');
+  assert.ok(!log.some((line) => /run stopped/i.test(line)), 'the switch is not a stopped run');
+  assert.match(document.querySelector('#run-state').textContent, /completed/i);
+  assert.equal(stepBtn.disabled, true, 'step should be disabled once the run goes through');
+  const statsIds = [...document.querySelectorAll('#stats-body tr')].map((tr) => tr.firstChild.textContent);
+  for (const id of ['start', 'first', 'second', 'end']) {
+    assert.ok(statsIds.includes(id), `stats should cover ${id} from both sides of the switch`);
+  }
+});
+
+test('ticking step mode mid-run offers Step, which pauses it with fresh Signal controls', async () => {
+  const stepMode = document.querySelector('#step-mode');
+  change(stepMode, false);
+  document.querySelector('#source').value = USER_TASK_SOURCE;
+  document.querySelector('#variables').value = '';
+  click(document.querySelector('#run'));
+
+  const firstWait = await waitFor(() => document.querySelector('#log li.wait'));
+  const stepBtn = document.querySelector('#step');
+  assert.equal(stepBtn.disabled, true);
+  change(stepMode, true);
+  assert.equal(stepBtn.disabled, false, 'ticking step mode should offer Step');
+  assert.equal(document.querySelectorAll('#log li.wait').length, 1, 'ticking alone should not switch');
+
+  click(stepBtn);
+  const waits = await waitFor(() => {
+    const lines = document.querySelectorAll('#log li.wait');
+    return lines.length === 2 && lines;
+  });
+  assert.equal(firstWait.querySelector('button').disabled, true, 'the pre-switch Signal should retire');
+  assert.ok([...document.querySelectorAll('#log li')].some((li) => /switched to step mode/i.test(li.textContent)));
+
+  const freshWait = waits[1];
+  freshWait.querySelector('input').value = '{ "approved": true }';
+  click(freshWait.querySelector('button'));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(document.querySelector('#output').textContent, '', 'the run should now wait for Step');
+
+  for (let i = 0; i < 20 && !document.querySelector('#output').textContent; i++) {
+    click(stepBtn);
+    await new Promise((r) => setTimeout(r, 1));
+  }
+  assert.match(document.querySelector('#output').textContent, /"approved": true/);
+  change(stepMode, false);
+});
+
+test('Stop halts the run and Resume carries on where it stopped', async () => {
+  const stopBtn = document.querySelector('#stop');
+  const resumeBtn = document.querySelector('#resume');
+  assert.equal(stopBtn.disabled, true, 'stop should be disabled without a run');
+  assert.equal(resumeBtn.disabled, true, 'resume should be disabled without a stopped run');
+
+  change(document.querySelector('#step-mode'), false);
+  document.querySelector('#source').value = USER_TASK_SOURCE;
+  document.querySelector('#variables').value = '';
+  click(document.querySelector('#run'));
+
+  const firstWait = await waitFor(() => document.querySelector('#log li.wait'));
+  assert.equal(stopBtn.disabled, false, 'stop should be enabled while running');
+  assert.equal(resumeBtn.disabled, true, 'resume should stay disabled while running');
+
+  click(stopBtn);
+  await waitFor(() => !resumeBtn.disabled);
+  assert.match(document.querySelector('#run-state').textContent, /stopped/i);
+  assert.ok([...document.querySelectorAll('#log li')].some((li) => /run stopped/i.test(li.textContent)));
+  assert.equal(stopBtn.disabled, true, 'stop should be disabled once stopped');
+  assert.equal(document.querySelector('#run').disabled, false, 'run should be available to start over');
+  assert.equal(firstWait.querySelector('button').disabled, true, 'the stopped wait should retire');
+
+  const linesBefore = document.querySelectorAll('#log li').length;
+  click(resumeBtn);
+  const freshWait = await waitFor(() => {
+    const lines = document.querySelectorAll('#log li.wait');
+    return lines.length === 2 && lines[1];
+  });
+  assert.ok(document.querySelectorAll('#log li').length > linesBefore, 'resume should keep the log and append to it');
+  assert.equal(resumeBtn.disabled, true, 'resume should disable while running');
+  assert.equal(stopBtn.disabled, false);
+  assert.equal(document.querySelector('#run').disabled, true);
+
+  freshWait.querySelector('input').value = '{ "approved": true }';
+  click(freshWait.querySelector('button'));
+  await waitFor(() => document.querySelector('#output').textContent);
+  assert.match(document.querySelector('#output').textContent, /"approved": true/);
+  assert.equal(resumeBtn.disabled, true, 'a completed run cannot be resumed');
+  assert.equal(stopBtn.disabled, true);
+});
+
+test('a stopped step-mode run resumes in step mode', async () => {
+  const stepMode = document.querySelector('#step-mode');
+  change(stepMode, true);
+  document.querySelector('#source').value = TASKS_SOURCE;
+  document.querySelector('#variables').value = '';
+  click(document.querySelector('#run'));
+
+  const stepBtn = document.querySelector('#step');
+  await waitFor(() => !stepBtn.disabled);
+  click(stepBtn);
+  click(stepBtn);
+  click(document.querySelector('#stop'));
+  await waitFor(() => !document.querySelector('#resume').disabled);
+  assert.equal(stepBtn.disabled, true, 'step should be disabled while stopped');
+
+  click(document.querySelector('#resume'));
+  await waitFor(() => !stepBtn.disabled);
+  for (let i = 0; i < 30 && !document.querySelector('#output').textContent; i++) {
+    click(stepBtn);
+    await new Promise((r) => setTimeout(r, 1));
+  }
+  assert.match(document.querySelector('#run-state').textContent, /completed/i);
+  change(stepMode, false);
+});
+
+test('dropping a new diagram forgets the stopped run', async () => {
+  document.querySelector('#source').value = USER_TASK_SOURCE;
+  click(document.querySelector('#run'));
+  await waitFor(() => document.querySelector('#log li.wait'));
+  click(document.querySelector('#stop'));
+  await waitFor(() => !document.querySelector('#resume').disabled);
+
+  const dropEv = new window.Event('drop', { cancelable: true });
+  Object.defineProperty(dropEv, 'dataTransfer', {
+    value: { files: [{ name: 'other.bpmn', text: async () => TASKS_SOURCE }] },
+  });
+  document.querySelector('[data-dropzone]').dispatchEvent(dropEv);
+  await waitFor(() => document.querySelector('#source').value.includes('Def_uitasks'));
+  assert.equal(document.querySelector('#resume').disabled, true, 'a new diagram cannot resume the old run');
+});
+
+test('variables are validated as they are typed', async () => {
+  const variables = document.querySelector('#variables');
+  const error = document.querySelector('#variables-error');
+  const type = (value) => {
+    variables.value = value;
+    variables.dispatchEvent(new window.Event('input'));
+  };
+
+  type('{ "order": ');
+  assert.equal(variables.classList.contains('invalid'), true, 'invalid JSON should mark the textarea');
+  assert.equal(variables.getAttribute('aria-invalid'), 'true');
+  assert.equal(error.hidden, false, 'the parse error should be shown beside the textarea');
+  assert.match(error.textContent, /not valid JSON/);
+
+  type('[1, 2]');
+  assert.match(error.textContent, /must be a JSON object/, 'a non-object should be flagged too');
+
+  type('{ "order": { "total": 1 } }');
+  assert.equal(variables.classList.contains('invalid'), false, 'valid JSON should clear the mark');
+  assert.equal(variables.hasAttribute('aria-invalid'), false);
+  assert.equal(error.hidden, true);
+
+  type('');
+  assert.equal(variables.classList.contains('invalid'), false, 'empty variables are fine');
+});
+
+test('Run recovers once invalid variables are fixed', async () => {
+  const variables = document.querySelector('#variables');
+  document.querySelector('#source').value = TASKS_SOURCE;
+  variables.value = '{ bad';
+  variables.dispatchEvent(new window.Event('input'));
+  click(document.querySelector('#run'));
+  await waitFor(() => document.querySelector('#log li.error'));
+  assert.equal(document.querySelector('#run').disabled, false, 'Run should stay armed for a retry');
+
+  variables.value = '{ "fixed": true }';
+  variables.dispatchEvent(new window.Event('input'));
+  click(document.querySelector('#run'));
+  await waitFor(() => document.querySelector('#output').textContent);
+  assert.match(document.querySelector('#run-state').textContent, /completed/i);
+});

@@ -460,6 +460,8 @@ ${head({
         <p class="run-actions">
           <button id="run" type="button">Run</button>
           <button id="step" type="button" disabled>Step</button>
+          <button id="stop" type="button" class="secondary" disabled>Stop</button>
+          <button id="resume" type="button" class="secondary" disabled>Resume</button>
           <button id="example" type="button" class="secondary">Load example</button>
         </p>
         <p class="run-options">
@@ -506,8 +508,9 @@ ${head({
       <label for="source">BPMN 2.0 XML &mdash; paste it, or drop a <code>.bpmn</code> file on this panel</label>
       <textarea id="source" spellcheck="false" placeholder="&lt;definitions xmlns=&quot;http://www.omg.org/spec/BPMN/20100524/MODEL&quot; ...&gt;"></textarea>
       <label for="variables">Initial environment variables (JSON)</label>
-      <textarea id="variables" class="variables" spellcheck="false" placeholder='{ "order": { "total": 199 } }'></textarea>
-      <p class="hint">FEEL expressions plus zeebe and camunda 7 extension elements are supported. Unregistered service task types and foreign script formats run through, and waiting manual and user tasks get a Signal button in the log unless bypassed. The helpers <code>takeOnce</code> and <code>takeTwice</code> make circular flows terminate: use <code>= takeOnce()</code> in a loop-back condition, or <code>takeTwice</code> as a service task type and <code>= taken</code> on the flow.</p>
+      <textarea id="variables" class="variables" aria-describedby="variables-error" spellcheck="false" placeholder='{ "order": { "total": 199 } }'></textarea>
+      <p id="variables-error" class="field-error" role="status" hidden></p>
+      <p class="hint">FEEL expressions plus zeebe and camunda 7 extension elements are supported. Unregistered service task types and foreign script formats run through, and waiting manual and user tasks get a Signal button in the log unless bypassed. The helpers <code>takeOnce</code> and <code>takeTwice</code> make circular flows terminate: use <code>= takeOnce()</code> in a loop-back condition, or <code>takeTwice</code> as a service task type and <code>= taken</code> on the flow. The service task type <code>delay</code> completes after a 1&nbsp;ms timeout.</p>
     </section>
     <section class="run-about">
       <h2>A free online BPMN engine, in your browser</h2>
