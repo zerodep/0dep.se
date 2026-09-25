@@ -7,6 +7,7 @@
 - `/run/`: a `delay` service is registered for every run — use it as a service task type to complete after a 1 ms timeout, run through the engine's environment timers
 - runner works around a bpmn-elements 18.1 stall: a step-mode activity parked at `executed` is stepped on to `end` before a stop or state capture, since resuming it redelivers its unacked run.execute against the completed execution and it stays `executing`
 - `/run/`: the variables textarea is validated as you type — invalid JSON or a non-object marks it and shows the parse error beside it, before Run is pressed
+- footer shows the site version (from `package.json`) on every page
 - dependencies: bpmn-js 18.30 (diagram-js 15.27)
 
 ## v1.10.0 - 2026-09-23

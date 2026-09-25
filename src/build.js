@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { build as bundleJs } from 'esbuild';
+import pkg from '../package.json' with { type: 'json' };
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -181,7 +182,7 @@ function footer(site) {
       &middot;
       <a href="${escape(site.linkedin)}" rel="noopener">LinkedIn</a>
     </p>
-    <p class="copy">&copy; Pål Edman &middot; MIT licensed</p>
+    <p class="copy">&copy; Pål Edman &middot; MIT licensed &middot; <span class="version">v${escape(pkg.version)}</span></p>
   </footer>`;
 }
 

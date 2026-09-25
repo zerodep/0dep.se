@@ -236,6 +236,14 @@ test('home: footer links to LinkedIn, GitHub org, npm scope — named, not raw U
   }
 });
 
+test('every page footer shows the site version', async () => {
+  const { version } = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
+  for (const page of ['index.html', 'about/index.html', 'run/index.html', 'dmn/index.html', 'tools/index.html', 'toc/index.html']) {
+    const doc = parseHtml(await readFile(join(distDir, page), 'utf8'));
+    assert.match(doc.querySelector('footer .version')?.textContent ?? '', new RegExp(`v${version.replaceAll('.', '\\.')}`), `${page} footer should show v${version}`);
+  }
+});
+
 test('home: only JSON-LD script tags (no executable JS)', () => {
   const nonLd = [...homeDoc.querySelectorAll('script')].filter(
     (s) => s.getAttribute('type') !== 'application/ld+json',
