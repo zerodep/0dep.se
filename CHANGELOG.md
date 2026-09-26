@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.10.2 - 2026-09-26
+
+- honest dependency counts: the manifest gains `peerDeps` (a package's required `peerDependencies`, optional peers excluded) and the card eyebrow only shows the zero-dependency ring when there are neither dependencies nor peers; otherwise it lists the peers the consumer has to install, linking siblings on the page. bpmn-engine 26 ships no `dependencies` at all — its five ecosystem packages are peers — so its card now reads 0 deps · 5 peers instead of 4 deps
+- bpmn-engine added as a devDependency so the manifest cross-check test covers it
+- dependencies: unnecessary 3.2
+
 ## v1.10.1 - 2026-09-24
 
 - `/run/`: step mode can be switched mid-run — unticking "Step through the run" while stepping enables Run (Step keeps working), and Run then goes the rest of the way through; ticking it while running through enables Step, and the first Step pauses the run in step mode. bpmn-elements clones the step setting into every process, so the switch captures the run's state with `step` flipped, stops it and resumes a recovered definition; the diagram, markers and counters carry on, waits come back with fresh Signal controls, stats span both sides and the loop guard applies again once running through

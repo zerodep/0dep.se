@@ -836,8 +836,10 @@ main.profile {
 }
 .project .deps.zero { color: var(--token); }
 .project .deps .ring { flex: none; }
-.project .deps .builds-on a { color: inherit; text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 2px; }
-.project .deps .builds-on a:hover { color: var(--token); }
+.project .deps .builds-on a,
+.project .deps .peers a { color: inherit; text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 2px; }
+.project .deps .builds-on a:hover,
+.project .deps .peers a:hover { color: var(--token); }
 
 
 /* /toc/ — markdown table of contents generator */

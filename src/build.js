@@ -221,17 +221,23 @@ function renderLibVersions(names, versions) {
 
 /**
  * The dependency eyebrow: the site's promise is zero dependencies, so every card
- * opens with the real number. Zero renders as the ring mark; anything else says
- * what the package builds on, linking siblings that are listed on the page.
+ * opens with the real number. The ring mark is only earned when nothing has to
+ * be installed at all — no dependencies and no required peers. Otherwise the
+ * eyebrow says what the package builds on and which peers the consumer has to
+ * bring, linking siblings that are listed on the page.
  */
 function renderDeps(p, npmToSlug) {
   const deps = p.runtimeDeps ?? [];
-  if (deps.length === 0) return `<div class="deps zero">${RING_SVG} 0 deps</div>`;
-  const names = deps.map((dep) => {
+  const peers = p.peerDeps ?? [];
+  if (deps.length === 0 && peers.length === 0) return `<div class="deps zero">${RING_SVG} 0 deps</div>`;
+  const link = (dep) => {
     const slug = npmToSlug.get(dep);
     return slug ? `<a href="#${escape(slug)}">${escape(dep)}</a>` : `<span>${escape(dep)}</span>`;
-  });
-  return `<div class="deps">${deps.length} dep${deps.length === 1 ? '' : 's'} <span class="builds-on">&middot; builds on ${names.join(', ')}</span></div>`;
+  };
+  const parts = [`${deps.length} dep${deps.length === 1 ? '' : 's'}`];
+  if (deps.length > 0) parts.push(`<span class="builds-on">&middot; builds on ${deps.map(link).join(', ')}</span>`);
+  if (peers.length > 0) parts.push(`<span class="peers">&middot; ${peers.length} peer${peers.length === 1 ? '' : 's'}: ${peers.map(link).join(', ')}</span>`);
+  return `<div class="deps">${parts.join(' ')}</div>`;
 }
 
 function renderProject(p, npmToSlug = new Map()) {

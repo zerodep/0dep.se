@@ -56,6 +56,7 @@
             "parser"
           ],
           "runtimeDeps": [],
+          "peerDeps": [],
           "link": {
             "href": "/tools/#iso",
             "label": "Parse ISO 8601"
@@ -73,7 +74,12 @@
             "azure",
             "telemetry"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "@opentelemetry/api",
+            "applicationinsights",
+            "pino-abstract-transport"
+          ]
         },
         {
           "slug": "ocrgenerator",
@@ -88,6 +94,7 @@
             "validator"
           ],
           "runtimeDeps": [],
+          "peerDeps": [],
           "link": {
             "href": "/tools/#ocr",
             "label": "Check an OCR reference"
@@ -105,7 +112,8 @@
             "markdown",
             "ci"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": []
         },
         {
           "slug": "toc",
@@ -120,6 +128,7 @@
             "cli"
           ],
           "runtimeDeps": [],
+          "peerDeps": [],
           "link": {
             "href": "/toc/",
             "label": "Generate a table of contents"
@@ -139,7 +148,8 @@
           ],
           "runtimeDeps": [
             "smqp"
-          ]
+          ],
+          "peerDeps": []
         }
       ]
     },
@@ -164,11 +174,13 @@
             "engine",
             "process"
           ],
-          "runtimeDeps": [
+          "runtimeDeps": [],
+          "peerDeps": [
             "bpmn-elements",
             "bpmn-moddle",
+            "debug",
             "moddle-context-serializer",
-            "debug"
+            "smqp"
           ]
         },
         {
@@ -186,6 +198,14 @@
           "runtimeDeps": [
             "lru-cache",
             "multer"
+          ],
+          "peerDeps": [
+            "@0dep/piso",
+            "bpmn-elements",
+            "bpmn-engine",
+            "debug",
+            "express",
+            "smqp"
           ]
         },
         {
@@ -202,7 +222,8 @@
           "runtimeDeps": [
             "smqp",
             "@0dep/piso"
-          ]
+          ],
+          "peerDeps": []
         },
         {
           "slug": "dmn-elements",
@@ -220,7 +241,10 @@
             "feel",
             "drg"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "feelin"
+          ]
         },
         {
           "slug": "smqp",
@@ -234,7 +258,8 @@
             "queue",
             "pubsub"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": []
         },
         {
           "slug": "moddle-context-serializer",
@@ -247,7 +272,10 @@
             "serializer",
             "moddle"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "bpmn-moddle"
+          ]
         },
         {
           "slug": "bpmn-extensions",
@@ -263,6 +291,10 @@
           ],
           "runtimeDeps": [
             "feelin"
+          ],
+          "peerDeps": [
+            "croner",
+            "bpmn-elements"
           ]
         },
         {
@@ -277,7 +309,12 @@
             "extensions",
             "automation"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "croner",
+            "@0dep/piso",
+            "bpmn-elements"
+          ]
         }
       ]
     },
@@ -298,7 +335,11 @@
             "swagger",
             "typescript"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "debug",
+            "typescript"
+          ]
         },
         {
           "slug": "aller-pino-gcp-transport",
@@ -312,7 +353,11 @@
             "gcp",
             "google-cloud"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "sonic-boom",
+            "pino-abstract-transport"
+          ]
         },
         {
           "slug": "aller-google-cloud-secret",
@@ -326,7 +371,15 @@
             "cache",
             "testing"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": [
+            "@google-cloud/secret-manager",
+            "@grpc/grpc-js",
+            "@grpc/proto-loader",
+            "debug",
+            "long",
+            "lru-cache"
+          ]
         },
         {
           "slug": "onify-fake-amqplib",
@@ -342,7 +395,8 @@
           ],
           "runtimeDeps": [
             "smqp"
-          ]
+          ],
+          "peerDeps": []
         },
         {
           "slug": "chronokinesis",
@@ -356,7 +410,8 @@
             "mock",
             "timezone"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": []
         },
         {
           "slug": "unnecessary",
@@ -370,7 +425,8 @@
             "unused",
             "node:test"
           ],
-          "runtimeDeps": []
+          "runtimeDeps": [],
+          "peerDeps": []
         }
       ]
     }

@@ -31,10 +31,12 @@ const allProjects = () => manifest.groups.flatMap((g) => g.projects);
 
 // --- manifest: honest dependency counts ---
 
-test('every project declares its runtime dependencies as a list of package names', () => {
+test('every project declares its runtime and peer dependencies as lists of package names', () => {
   for (const p of allProjects()) {
-    assert.ok(Array.isArray(p.runtimeDeps), `runtimeDeps array required: ${p.slug}`);
-    for (const dep of p.runtimeDeps) assert.match(dep, /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/, `${p.slug}: odd dep name ${dep}`);
+    for (const field of ['runtimeDeps', 'peerDeps']) {
+      assert.ok(Array.isArray(p[field]), `${field} array required: ${p.slug}`);
+      for (const dep of p[field]) assert.match(dep, /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/, `${p.slug}: odd ${field} name ${dep}`);
+    }
   }
 });
 
@@ -54,8 +56,24 @@ test('runtimeDeps match the published dependencies of packages installed locally
       Object.keys(pkg.dependencies ?? {}).sort(),
       `${p.slug}: runtimeDeps should mirror the installed package's dependencies`,
     );
+    // peers the consumer has to install themselves count too — optional peers do not
+    const requiredPeers = Object.keys(pkg.peerDependencies ?? {}).filter((name) => !pkg.peerDependenciesMeta?.[name]?.optional);
+    assert.deepEqual(
+      [...p.peerDeps].sort(),
+      requiredPeers.sort(),
+      `${p.slug}: peerDeps should mirror the installed package's required peerDependencies`,
+    );
   }
   assert.ok(checked >= 3, 'expected several listed packages to be installed for cross-checking');
+});
+
+test('packages with required peers are not sold as zero-dependency', () => {
+  const withPeers = allProjects().filter((p) => p.runtimeDeps.length === 0 && p.peerDeps.length > 0);
+  assert.ok(withPeers.some((p) => p.slug === 'dmn-elements'), 'dmn-elements peers on feelin');
+  assert.ok(withPeers.some((p) => p.slug === 'moddle-context-serializer'), 'moddle-context-serializer peers on bpmn-moddle');
+  const engine = allProjects().find((p) => p.slug === 'bpmn-engine');
+  assert.deepEqual(engine.runtimeDeps, [], 'bpmn-engine ships no dependencies of its own');
+  assert.ok(engine.peerDeps.includes('smqp') && engine.peerDeps.includes('bpmn-elements'), 'bpmn-engine peers on the ecosystem');
 });
 
 test('the zerodep group only builds on packages listed on this page', () => {
@@ -86,14 +104,26 @@ test('every card opens with its honest dependency count', () => {
     const title = article.querySelector('header h3');
     assert.ok(title.compareDocumentPosition(deps) & 4, `${p.slug}: deps should sit below the package title`); // DOCUMENT_POSITION_FOLLOWING
     const n = p.runtimeDeps.length;
-    if (n === 0) {
+    const peers = p.peerDeps.length;
+    if (n === 0 && peers === 0) {
       assert.ok(deps.classList.contains('zero'), `${p.slug}: zero deps should be marked`);
       assert.ok(deps.querySelector('svg.ring'), `${p.slug}: zero deps should carry the ring mark`);
       assert.match(deps.textContent, /0 deps/);
     } else {
+      // the ring is the zero-dependency promise: a package that needs peers installed has not earned it
+      assert.ok(!deps.classList.contains('zero'), `${p.slug}: needs ${peers} peers, must not be marked zero`);
+      assert.equal(deps.querySelector('svg.ring'), null, `${p.slug}: no ring when something must be installed`);
       assert.match(deps.textContent, new RegExp(`${n} dep${n === 1 ? '' : 's'}`), `${p.slug}: should state ${n} deps`);
+    }
+    if (n > 0) {
       assert.match(deps.textContent, /builds on/, `${p.slug}: should say what it builds on`);
       for (const dep of p.runtimeDeps) assert.ok(deps.textContent.includes(dep), `${p.slug}: should name ${dep}`);
+    }
+    if (peers > 0) {
+      assert.match(deps.textContent, new RegExp(`${peers} peer${peers === 1 ? '' : 's'}`), `${p.slug}: should state ${peers} peers`);
+      for (const dep of p.peerDeps) assert.ok(deps.querySelector('.peers').textContent.includes(dep), `${p.slug}: should name peer ${dep}`);
+    } else {
+      assert.equal(deps.querySelector('.peers'), null, `${p.slug}: no peers to list`);
     }
     // the description stays the card's first paragraph
     assert.equal(article.querySelector('p').textContent, p.description);
