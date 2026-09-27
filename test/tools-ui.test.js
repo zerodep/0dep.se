@@ -74,7 +74,8 @@ test('invalid ISO input is shown as an error and still lands in history', async 
     const el = document.querySelector('#iso-result');
     return el.classList.contains('invalid') ? el : null;
   });
-  assert.match(result.textContent, /Invalid ISO 8601 date/);
+  assert.match(result.textContent, /Not a valid ISO 8601 date/);
+  assert.match(result.textContent, /out of range 1-28/);
   await waitFor(() => document.querySelectorAll('#history-list li').length === 2);
 });
 

@@ -21,7 +21,7 @@
   "author": "Pål Edman",
   "devDependencies": {
     "@0dep/bpmn-extensions": "^1.0.0",
-    "@0dep/piso": "^5.1.0",
+    "@0dep/piso": "^5.2.0",
     "@0dep/toc": "^2.0.0",
     "amqp-emulator": "^0.1.0",
     "bpmn-elements": "^18.1.0",

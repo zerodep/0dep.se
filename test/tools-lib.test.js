@@ -62,7 +62,7 @@ describe('evaluateIso', () => {
     const r = evaluateIso('2023-02-29');
     assert.equal(r.ok, false);
     assert.equal(r.kind, 'date');
-    assert.match(r.error, /Invalid ISO 8601 date/);
+    assert.match(r.error, /day .* is out of range 1-28/);
 
     const d = evaluateIso('P0.5YT3S', { kind: 'duration' });
     assert.equal(d.ok, false);
