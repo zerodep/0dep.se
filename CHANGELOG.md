@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.11.0 - 2026-10-08
+
+- upgrade [`@0dep/piso@6`](https://github.com/zerodep/piso/blob/main/CHANGELOG.md)
+
 ## v1.10.2 - 2026-09-26
 
 - honest dependency counts: the manifest gains `peerDeps` (a package's required `peerDependencies`, optional peers excluded) and the card eyebrow only shows the zero-dependency ring when there are neither dependencies nor peers; otherwise it lists the peers the consumer has to install, linking siblings on the page. bpmn-engine 26 ships no `dependencies` at all — its five ecosystem packages are peers — so its card now reads 0 deps · 5 peers instead of 4 deps
