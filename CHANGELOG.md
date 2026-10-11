@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.11.1 - 2026-10-11
+
+- upgrade [`bpmn-elements`](https://github.com/paed01/bpmn-elements/blob/master/CHANGELOG.md)
+
 ## v1.11.0 - 2026-10-08
 
 - upgrade [`@0dep/piso@6`](https://github.com/zerodep/piso/blob/main/CHANGELOG.md)
