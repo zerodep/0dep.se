@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    id="ShippingDefinitions" name="Shipping" namespace="https://example.com/dmn/shipping">
+  <itemDefinition id="tParcel" name="tParcel">
+    <itemComponent id="tParcelWeight" name="weight"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+  <inputData id="parcelInputData" name="Parcel">
+    <variable id="parcelInputVariable" name="parcel" typeRef="tParcel" />
+  </inputData>
+  <decision id="shippingFee" name="Shipping fee">
+    <variable id="shippingFeeVariable" name="shippingFee" typeRef="number" />
+    <informationRequirement id="shippingFeeReqParcel">
+      <requiredInput href="#parcelInputData" />
+    </informationRequirement>
+    <decisionTable id="shippingFeeTable" hitPolicy="UNIQUE">
+      <input id="weightInput" label="Weight">
+        <inputExpression id="weightInputExpression" typeRef="number"><text>parcel.weight</text></inputExpression>
+      </input>
+      <output id="shippingFeeOutput" name="shippingFee" typeRef="number" />
+      <rule id="heavyRule">
+        <inputEntry id="heavyEntry"><text>&gt; 10</text></inputEntry>
+        <outputEntry id="heavyFee"><text>50</text></outputEntry>
+      </rule>
+      <rule id="lightRule">
+        <inputEntry id="lightEntry"><text>&lt;= 10</text></inputEntry>
+        <outputEntry id="lightFee"><text>10</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.0 - 2026-10-13
+
+- `/dmn/`: DMN imports resolve from dropped files — every `.dmn` dropped on the panel is kept by namespace, and a model that imports one of them evaluates through it (drop them together or one after the other; dropping a missing import keeps the source as is). The declared imports are listed under the source as loaded or missing, and a `locationURI` is never fetched
+- dependencies: [`dmn-elements`](https://github.com/zerodep/dmn-elements/blob/main/CHANGELOG.md) 0.4 (import resolution), happy-dom 21
+
 ## v1.11.1 - 2026-10-11
 
 - upgrade [`bpmn-elements`](https://github.com/paed01/bpmn-elements/blob/master/CHANGELOG.md)

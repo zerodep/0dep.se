@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+    id="OrderDefinitions" name="Order" namespace="https://example.com/dmn/order">
+  <import id="shippingImport" name="shipping" namespace="https://example.com/dmn/shipping"
+      importType="https://www.omg.org/spec/DMN/20191111/MODEL/" locationURI="shipping.dmn" />
+  <inputData id="totalInputData" name="Order total">
+    <variable id="totalInputVariable" name="total" typeRef="number" />
+  </inputData>
+  <decision id="orderTotal" name="Order total with shipping">
+    <variable id="orderTotalVariable" name="orderTotal" typeRef="number" />
+    <informationRequirement id="orderTotalReqTotal">
+      <requiredInput href="#totalInputData" />
+    </informationRequirement>
+    <informationRequirement id="orderTotalReqShipping">
+      <requiredDecision href="https://example.com/dmn/shipping#shippingFee" />
+    </informationRequirement>
+    <literalExpression id="orderTotalExpression"><text>total + shipping.shippingFee</text></literalExpression>
+  </decision>
+</definitions>

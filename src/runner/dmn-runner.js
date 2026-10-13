@@ -18,6 +18,51 @@ export function listDecisions(rootElement) {
 }
 
 /**
+ * The declared imports of a parsed DMN as `{ name, namespace, locationURI }`.
+ * The locationURI is informational only — the runner never fetches it.
+ */
+export function listImports(rootElement) {
+  return (rootElement.import || []).map(({ name, namespace, locationURI }) => ({ name, namespace, locationURI }));
+}
+
+/**
+ * An in-memory library of parsed DMN models keyed by namespace — the only
+ * place declared imports resolve from. Nothing is ever fetched: an import
+ * whose namespace has not been added fails the evaluation with a clear
+ * "did not resolve" error from dmn-elements.
+ * @returns {{
+ *   add: (source: string, label?: string) => Promise<{ namespace: string, name?: string, label?: string, source: string, rootElement: object, imports: object[], decisions: object[] }>,
+ *   has: (namespace: string) => boolean,
+ *   list: () => { namespace: string, name?: string, label?: string }[],
+ *   resolveImport: (importDef: { namespace: string }) => object | undefined,
+ * }}
+ */
+export function createImportLibrary() {
+  const models = new Map();
+  return {
+    /** Parse DMN XML and file it under its namespace, replacing an earlier model of the same namespace. */
+    async add(source, label) {
+      const rootElement = await parseDmn(source);
+      const model = {
+        namespace: rootElement.namespace,
+        name: rootElement.name,
+        label,
+        source: String(source),
+        rootElement,
+        imports: listImports(rootElement),
+        decisions: listDecisions(rootElement),
+      };
+      models.set(model.namespace, model);
+      return model;
+    },
+    has: (namespace) => models.has(namespace),
+    list: () => [...models.values()].map(({ namespace, name, label }) => ({ namespace, name, label })),
+    /** dmn-elements `resolveImport` setting — looks the declared namespace up in the library, never on the network */
+    resolveImport: (importDef) => models.get(importDef.namespace)?.rootElement,
+  };
+}
+
+/**
  * The id of the DRG's output decision — the first decision no other decision
  * requires, falling back to the first decision. Evaluation walks upstream
  * requirements, so the output decision is the one that exercises the whole
@@ -99,15 +144,22 @@ export function forwardingLogger(onLog) {
  * @param {object} [options]
  * @param {(entry: {scope: string, level: string, message: string}) => void} [options.onLog] receives evaluation log lines
  * @param {Record<string, Function>} [options.services] services exposed to FEEL as `services.<name>`
- * @returns {Promise<{definition: object, rootElement: object, decisions: {id: string, name?: string, type: string}[]}>}
- *   the definition, the parsed moddle root (for rendering), and its decisions
+ * @param {(importDef: { name?: string, namespace: string, locationURI?: string }) => object | undefined} [options.resolveImport]
+ *   resolves a declared import to its parsed definitions, e.g. an import library's `resolveImport`;
+ *   without it a model with imports fails at evaluation
+ * @returns {Promise<{definition: object, rootElement: object, decisions: {id: string, name?: string, type: string}[], imports: {name?: string, namespace: string, locationURI?: string}[]}>}
+ *   the definition, the parsed moddle root (for rendering), its decisions, and its declared imports
  */
 export async function createDmnRunner(source, options = {}) {
-  const { onLog, services } = options;
+  const { onLog, services, resolveImport } = options;
   const rootElement = await parseDmn(source);
-  const environment = new Environment({ Logger: onLog && forwardingLogger(onLog), services });
+  const environment = new Environment({
+    Logger: onLog && forwardingLogger(onLog),
+    services,
+    settings: resolveImport ? { resolveImport } : undefined,
+  });
   const definition = new Definition(new Context(rootElement, environment));
-  return { definition, rootElement, decisions: listDecisions(rootElement) };
+  return { definition, rootElement, decisions: listDecisions(rootElement), imports: listImports(rootElement) };
 }
 
 /**

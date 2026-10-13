@@ -195,3 +195,73 @@ test('a decision table without an output column parses but fails evaluation loud
     },
   );
 });
+
+test('listImports returns the declared imports of a parsed DMN', async () => {
+  const { listImports } = await import('../src/runner/dmn-runner.js');
+  const order = await readFile(join(resources, 'order.dmn'), 'utf8');
+  const { rootElement } = await createDmnRunner(order);
+  assert.deepEqual(listImports(rootElement), [
+    { name: 'shipping', namespace: 'https://example.com/dmn/shipping', locationURI: 'shipping.dmn' },
+  ]);
+  const discount = await createDmnRunner(await readFile(join(resources, 'discount.dmn'), 'utf8'));
+  assert.deepEqual(listImports(discount.rootElement), []);
+});
+
+test('createDmnRunner exposes the declared imports', async () => {
+  const order = await readFile(join(resources, 'order.dmn'), 'utf8');
+  const { imports } = await createDmnRunner(order);
+  assert.deepEqual(imports.map((i) => i.namespace), ['https://example.com/dmn/shipping']);
+});
+
+test('import library parses added models and lists them by namespace', async () => {
+  const { createImportLibrary } = await import('../src/runner/dmn-runner.js');
+  const library = createImportLibrary();
+  assert.deepEqual(library.list(), []);
+
+  const added = await library.add(await readFile(join(resources, 'shipping.dmn'), 'utf8'), 'shipping.dmn');
+  assert.equal(added.namespace, 'https://example.com/dmn/shipping');
+  assert.equal(added.name, 'Shipping');
+  assert.equal(added.label, 'shipping.dmn');
+  assert.deepEqual(added.imports, []);
+  assert.deepEqual(added.decisions.map((d) => d.id), ['shippingFee']);
+  assert.ok(library.has('https://example.com/dmn/shipping'));
+  assert.deepEqual(library.list().map((m) => m.label), ['shipping.dmn']);
+
+  // the same namespace added again replaces the earlier model
+  await library.add(await readFile(join(resources, 'shipping.dmn'), 'utf8'), 'shipping-v2.dmn');
+  assert.deepEqual(library.list().map((m) => m.label), ['shipping-v2.dmn']);
+
+  await assert.rejects(library.add('not dmn', 'nope.dmn'));
+  assert.equal(library.list().length, 1, 'a rejected add must not leave a model behind');
+});
+
+test('a decision requiring an imported decision evaluates through the import library', async () => {
+  const { createImportLibrary } = await import('../src/runner/dmn-runner.js');
+  const library = createImportLibrary();
+  await library.add(await readFile(join(resources, 'shipping.dmn'), 'utf8'), 'shipping.dmn');
+
+  const order = await readFile(join(resources, 'order.dmn'), 'utf8');
+  const { definition } = await createDmnRunner(order, { resolveImport: library.resolveImport });
+  const { result, trace } = await evaluateDecision(definition, 'orderTotal', { total: 100, parcel: { weight: 12 } });
+  assert.equal(result, 150);
+  assert.ok(trace.some((t) => t.id === 'shippingFee'), 'imported decision should land in the trace');
+});
+
+test('an import missing from the library fails the evaluation — nothing is fetched', async () => {
+  const { createImportLibrary } = await import('../src/runner/dmn-runner.js');
+  const library = createImportLibrary();
+  const originalFetch = globalThis.fetch;
+  let fetched = 0;
+  globalThis.fetch = async () => {
+    fetched++;
+    throw new Error('must not fetch');
+  };
+  try {
+    const order = await readFile(join(resources, 'order.dmn'), 'utf8');
+    const { definition } = await createDmnRunner(order, { resolveImport: library.resolveImport });
+    await assert.rejects(evaluateDecision(definition, 'orderTotal', { total: 100 }), /import <shipping> did not resolve/);
+    assert.equal(fetched, 0, 'the locationURI must never be fetched');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

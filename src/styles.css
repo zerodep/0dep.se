@@ -355,6 +355,13 @@ main.profile {
 .run-input .field-error { margin: 0 0 0.25rem; font-size: 0.82rem; color: #c0392b; }
 .run-input label + textarea { margin-top: 0; }
 .run-input textarea + label { margin-top: 1rem; }
+.run-input .imports { list-style: none; margin: 0.5rem 0 0; padding: 0; font-size: 0.85rem; }
+.run-input .imports li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.25rem 0; border-top: 1px dashed var(--grid); }
+.run-input .imports li::before { content: ''; flex: none; width: 0.6rem; height: 0.6rem; border: 1.5px solid var(--ink); border-radius: 50%; transform: translateY(0.05rem); }
+.run-input .imports li[data-status="loaded"]::before { background: var(--token); border-color: var(--token); }
+.run-input .imports .import-namespace { color: var(--muted); overflow-wrap: anywhere; }
+.run-input .imports .import-label { margin-left: auto; color: var(--muted); white-space: nowrap; }
+.run-input .imports + .hint { margin-top: 0.5rem; }
 .run-input textarea {
   width: 100%;
   min-height: 16rem;

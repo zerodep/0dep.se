@@ -1,4 +1,4 @@
-import { createDmnRunner, evaluateDecision, listRequiredInputs, pickOutputDecision } from './dmn-runner.js';
+import { createDmnRunner, createImportLibrary, evaluateDecision, listRequiredInputs, pickOutputDecision } from './dmn-runner.js';
 import { makeTakeHelper } from './take-helper.js';
 
 // --- demo services ---
@@ -38,9 +38,15 @@ const inputFormEl = document.querySelector('#input-form');
 const declaredInputsEl = document.querySelector('#declared-inputs');
 const declaredInputsLegend = document.querySelector('#declared-inputs-legend');
 const inputFieldsEl = document.querySelector('#input-fields');
+const importsEl = document.querySelector('#imports');
+const importsHint = document.querySelector('#imports-hint');
 
-/** @type {{ definition: object, rootElement: object, decisions: { id: string, name?: string, type: string }[] } | null} */
+/** @type {{ definition: object, rootElement: object, decisions: { id: string, name?: string, type: string }[], imports: { name?: string, namespace: string, locationURI?: string }[] } | null} */
 let runner = null;
+
+// Declared imports resolve only from here — every .dmn file dropped on the
+// panel is filed by namespace, and a locationURI is never fetched.
+const importLibrary = createImportLibrary();
 
 function logLine(text, { className } = {}) {
   const li = document.createElement('li');
@@ -253,6 +259,38 @@ inputFormEl.addEventListener('submit', (e) => {
   evaluate();
 });
 
+// --- imports ---
+
+/** List the declared imports of the loaded source with whether a dropped file covers them. */
+function renderImports() {
+  const imports = runner?.imports || [];
+  importsEl.textContent = '';
+  importsEl.hidden = importsHint.hidden = !imports.length;
+  if (!imports.length) return;
+
+  const loaded = new Map(importLibrary.list().map((m) => [m.namespace, m]));
+  for (const importDef of imports) {
+    const model = loaded.get(importDef.namespace);
+    const li = document.createElement('li');
+    li.dataset.namespace = importDef.namespace;
+    li.dataset.status = model ? 'loaded' : 'missing';
+    const name = document.createElement('strong');
+    name.textContent = importDef.name || model?.name || '(unnamed import)';
+    const namespace = document.createElement('span');
+    namespace.className = 'import-namespace';
+    namespace.textContent = importDef.namespace;
+    const label = document.createElement('span');
+    label.className = 'import-label';
+    label.textContent = model ? model.label || model.name || 'loaded' : 'missing — drop the file';
+    li.append(name, ' ', namespace, label);
+    importsEl.append(li);
+    if (!model) {
+      logLine(`import <${importDef.name || importDef.namespace}> is not loaded — drop ${importDef.locationURI || 'its .dmn file'} on this panel (${importDef.namespace})`, { className: 'warn' });
+      logDetails.open = true;
+    }
+  }
+}
+
 // --- source parsing ---
 
 let refreshSeq = 0;
@@ -266,12 +304,14 @@ async function refreshSource() {
     decisionSelect.textContent = '';
     renderTables(null);
     updateRequiredInputs();
+    renderImports();
     return;
   }
   try {
-    const next = await createDmnRunner(source, { onLog, services: demoServices() });
+    const next = await createDmnRunner(source, { onLog, services: demoServices(), resolveImport: importLibrary.resolveImport });
     if (seq !== refreshSeq) return; // superseded by a newer paste/drop
     runner = next;
+    renderImports();
 
     const previous = decisionSelect.value;
     decisionSelect.textContent = '';
@@ -295,6 +335,7 @@ async function refreshSource() {
     decisionSelect.textContent = '';
     renderTables(null);
     updateRequiredInputs();
+    renderImports();
     logLine(`not a valid DMN file — ${err?.message || err}`, { className: 'error' });
     logDetails.open = true;
   }
@@ -428,10 +469,36 @@ function wireDropzone(zone, onFiles) {
   });
 }
 
-wireDropzone(dropzone, async ([file]) => {
-  sourceEl.value = await file.text();
-  refreshSource();
-});
+/**
+ * Every dropped file joins the import library. The source becomes the dropped
+ * model that neither the loaded source nor another dropped file imports — so
+ * dropping a model together with the models it imports loads the importing
+ * one, and dropping a missing import afterwards keeps the source as is.
+ */
+async function onDroppedFiles(files) {
+  const dropped = [];
+  let firstText;
+  for (const file of files) {
+    const text = await file.text();
+    firstText ??= text;
+    try {
+      const model = await importLibrary.add(text, file.name);
+      dropped.push(model);
+      logLine(`${file.name} loaded — importable as ${model.namespace}`, { className: 'muted' });
+    } catch (err) {
+      logLine(`${file.name} is not a valid DMN file — ${err?.message || err}`, { className: 'error' });
+      logDetails.open = true;
+    }
+  }
+
+  const importedNamespaces = new Set([...(runner?.imports || []), ...dropped.flatMap((m) => m.imports)].map((i) => i.namespace));
+  const main = dropped.find((m) => !importedNamespaces.has(m.namespace));
+  if (main) sourceEl.value = main.source;
+  else if (!dropped.length && firstText !== undefined) sourceEl.value = firstText; // let refreshSource report the parse error
+  await refreshSource();
+}
+
+wireDropzone(dropzone, onDroppedFiles);
 
 // offline support — the service worker precaches the page and engine bundle
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {

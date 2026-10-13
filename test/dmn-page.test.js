@@ -250,3 +250,19 @@ test('sitemap lists /dmn/ high and weekly', async () => {
   assert.match(entry, /<priority>0.8<\/priority>/);
   assert.match(entry, /<changefreq>weekly<\/changefreq>/);
 });
+
+test('dmn page lists declared imports inside the drop zone and says they resolve from dropped files only', () => {
+  const zone = dmnDoc.querySelector('[data-dropzone]');
+  const list = zone.querySelector('ul#imports');
+  assert.ok(list, 'ul#imports not found in the drop zone');
+  assert.ok(list.hidden, 'the imports list starts hidden');
+  const hint = zone.querySelector('#imports-hint');
+  assert.match(hint?.textContent ?? '', /drop/i, 'hint should tell the user to drop the imported files');
+  assert.match(hint?.textContent ?? '', /never fetched|nothing is fetched|not fetched/i, 'hint should say imports are not fetched');
+});
+
+test('dmn page FAQ covers multi-model imports', () => {
+  const faq = dmnDoc.querySelector('dl.faq');
+  assert.match(faq.textContent, /imports?/i);
+  assert.match(faq.textContent, /drop/i);
+});

@@ -550,6 +550,10 @@ const dmnFaq = [
     a: 'DMN 1.3 decision tables and literal expressions, all boxed expressions including the DMN 1.4 additions (conditional, filter, for, some, every), decision services, business knowledge models, item definitions, and multi-model imports. FEEL expressions and unary tests are evaluated with feelin. The engine passes DMN TCK compliance level 2 in full.',
   },
   {
+    q: 'Does it resolve DMN imports?',
+    a: 'Yes, from files you drop. A model that imports another model (a shared type library, a decision in another file) evaluates once the imported file has been dropped on the panel too — drop them together or one after the other. Imports resolve by namespace, only against dropped files; the locationURI of an import is never fetched.',
+  },
+  {
     q: 'What engine powers the evaluator?',
     a: 'dmn-elements — the same open-source decision engine that backs business rule tasks on the BPMN runner and in the bpmn-engine ecosystem — with the DMN XML parsed by dmn-moddle.',
   },
@@ -663,13 +667,15 @@ ${head({
     <section class="run-input" data-dropzone>
       <label for="source">DMN XML &mdash; paste it, or drop a <code>.dmn</code> file on this panel</label>
       <textarea id="source" spellcheck="false" placeholder="&lt;definitions xmlns=&quot;https://www.omg.org/spec/DMN/20191111/MODEL/&quot; ...&gt;"></textarea>
+      <ul id="imports" class="imports" aria-label="Declared imports" hidden></ul>
+      <p id="imports-hint" class="hint" hidden>The model above imports other DMN models. They resolve only from files dropped on this panel &mdash; drop the missing <code>.dmn</code> files here, their <code>locationURI</code> is never fetched.</p>
       <label for="input-data">Input data (JSON)</label>
       <textarea id="input-data" class="variables" spellcheck="false" placeholder='{ "total": 250 }'></textarea>
       <p class="hint">The selected decision evaluates with the JSON above as input data &mdash; required decisions are walked bottom-up, and every evaluated element lands in the trace with its matched rules and result. Two demo services are registered for FEEL to call: <code>services.takeOnce("key")</code> returns true once per evaluation, and <code>services.exchangeRate("USD")</code> reads rates loaded asynchronously beside the run &mdash; service functions themselves must be synchronous.</p>
     </section>
     <section class="run-about">
       <h2>A free online DMN engine, in your browser</h2>
-      <p>This page evaluates DMN decisions entirely client-side: paste XML straight from your modeler or drop a <code>.dmn</code> file, pick a decision, and evaluate it with your input data &mdash; matched decision table rules light up and the trace shows how the result came to be. Chained decisions evaluate through the decision requirements graph (DRG): required decisions are walked bottom-up and the output decision is preselected, so files exported from Camunda Modeler or any dmn-js based tool run as-is. Your decisions never leave the browser, and after the first visit the page works offline. Need the process around the decisions? The <a href="/run/">online BPMN runner</a> executes whole diagrams, business rule tasks included.</p>
+      <p>This page evaluates DMN decisions entirely client-side: paste XML straight from your modeler or drop a <code>.dmn</code> file, pick a decision, and evaluate it with your input data &mdash; matched decision table rules light up and the trace shows how the result came to be. Chained decisions evaluate through the decision requirements graph (DRG): required decisions are walked bottom-up and the output decision is preselected, so files exported from Camunda Modeler or any dmn-js based tool run as-is. Models that import other models resolve them from files you drop alongside &mdash; nothing is fetched. Your decisions never leave the browser, and after the first visit the page works offline. Need the process around the decisions? The <a href="/run/">online BPMN runner</a> executes whole diagrams, business rule tasks included.</p>
       <dl class="faq">
 ${faq}
       </dl>

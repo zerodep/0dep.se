@@ -269,3 +269,78 @@ test('a well-formed decision table renders no warning', async () => {
   await waitFor(() => !document.querySelector('#tables .table-warning'));
   assert.ok(document.querySelector('#tables figure[data-decision-id="discount"] th.output'), 'complete table should render its output header');
 });
+
+/** Dispatch a drop of pseudo-files — `{ name, text() }` is all the app reads. */
+function drop(files) {
+  const event = new window.Event('drop', { cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', {
+    value: { files: files.map(([name, content]) => ({ name, text: async () => content })) },
+  });
+  document.querySelector('[data-dropzone]').dispatchEvent(event);
+}
+
+async function fixture(name) {
+  return readFile(join(repoRoot, 'test', 'resources', name), 'utf8');
+}
+
+test('dropping a model and the model it imports at once loads the importing one as source', async () => {
+  setSource('');
+  drop([
+    ['shipping.dmn', await fixture('shipping.dmn')],
+    ['order.dmn', await fixture('order.dmn')],
+  ]);
+
+  await waitFor(() => document.querySelector('#decision option[value="orderTotal"]'));
+  assert.match(document.querySelector('#source').value, /OrderDefinitions/, 'the importing model becomes the source');
+
+  const list = document.querySelector('#imports');
+  assert.ok(!list.hidden, 'imports list is revealed for a source with imports');
+  const item = list.querySelector('li[data-namespace="https://example.com/dmn/shipping"]');
+  assert.equal(item?.dataset.status, 'loaded');
+  assert.match(item.textContent, /shipping\.dmn/);
+
+  document.querySelector('#input-data').value = '{ "total": 100, "parcel": { "weight": 12 } }';
+  click(document.querySelector('#evaluate'));
+  await waitFor(() => document.querySelector('#result').textContent === '150');
+  assert.ok(
+    document.querySelector('#trace-body tr[data-element-id="shippingFee"]') || /shippingFee/.test(document.querySelector('#trace-body').textContent),
+    'the imported decision lands in the trace'
+  );
+});
+
+test('dropping the imported model after the importing one keeps the source and resolves the import', async () => {
+  setSource('');
+  drop([['order.dmn', await fixture('order.dmn')]]);
+  await waitFor(() => document.querySelector('#decision option[value="orderTotal"]'));
+  // the library persists across drops (shipping.dmn may already be in it from an
+  // earlier test) — the missing state is covered by the never-dropped namespace test below
+  assert.ok(document.querySelector('#imports li[data-namespace="https://example.com/dmn/shipping"]'), 'declared import is listed');
+
+  drop([['shipping.dmn', await fixture('shipping.dmn')]]);
+  await waitFor(() => document.querySelector('#imports li[data-status="loaded"]'));
+  assert.match(document.querySelector('#source').value, /OrderDefinitions/, 'dropping an imported model must not replace the source');
+
+  document.querySelector('#input-data').value = '{ "total": 1, "parcel": { "weight": 1 } }';
+  click(document.querySelector('#evaluate'));
+  await waitFor(() => document.querySelector('#result').textContent === '11');
+});
+
+test('a declared import that was never dropped is listed as missing and warned about', async () => {
+  const unresolved = (await fixture('order.dmn')).replaceAll('https://example.com/dmn/shipping', 'https://example.com/dmn/elsewhere');
+  setSource(unresolved);
+  const item = await waitFor(() => document.querySelector('#imports li[data-namespace="https://example.com/dmn/elsewhere"]'));
+  assert.equal(item.dataset.status, 'missing');
+  const warning = await waitFor(() => [...document.querySelectorAll('#log li.warn')].find((li) => /elsewhere/.test(li.textContent)));
+  assert.match(warning.textContent, /drop/i, 'the warning should tell the user to drop the file');
+
+  document.querySelector('#input-data').value = '{ "total": 1 }';
+  click(document.querySelector('#evaluate'));
+  const error = await waitFor(() => [...document.querySelectorAll('#log li.error')].find((li) => /did not resolve/.test(li.textContent)));
+  assert.ok(error);
+});
+
+test('a source without imports hides the imports list', async () => {
+  setSource(discountSource);
+  await waitFor(() => document.querySelector('#decision option[value="discount"]'));
+  assert.ok(document.querySelector('#imports').hidden);
+});
