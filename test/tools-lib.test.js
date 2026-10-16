@@ -25,6 +25,39 @@ describe('evaluateIso', () => {
     assert.equal(r.startAt, undefined, 'a duration has no absolute start without a reference');
       });
 
+  test('derives the start of a duration/end interval from its end, counting repetitions', () => {
+    const r = evaluateIso('R5/P1Y/2025-05-01T13:00:00Z');
+    assert.equal(r.start, '2020-05-01T13:00:00.000Z');
+    assert.equal(r.startDerived, true);
+    assert.equal(r.end, '2025-05-01T13:00:00.000Z');
+    assert.equal(r.endDerived, undefined);
+    const once = evaluateIso('P1D/2024-03-05T00:00Z');
+    assert.equal(once.kind, 'interval', 'a leading P with a slash is an interval, not a duration');
+    assert.equal(once.start, '2024-03-04T00:00:00.000Z');
+    assert.equal(once.startDerived, true);
+    const forever = evaluateIso('R-1/P1M/2024-07-27T00:00Z');
+    assert.equal(forever.start, undefined, 'an unbounded repeat has no first start');
+  });
+
+  test('derives the end of a start/duration interval from its start, counting repetitions', () => {
+    const r = evaluateIso('R3/2024-03-01T10:00Z/P1M');
+    assert.equal(r.end, '2024-06-01T10:00:00.000Z');
+    assert.equal(r.endDerived, true);
+    assert.equal(r.startDerived, undefined);
+    const once = evaluateIso('2024-03-01T10:00Z/P1D');
+    assert.equal(once.end, '2024-03-02T10:00:00.000Z');
+    assert.equal(once.endDerived, true);
+    const forever = evaluateIso('R-1/2009-07-01T00:00Z/P1M');
+    assert.equal(forever.end, undefined, 'an unbounded repeat never ends');
+    const explicit = evaluateIso('2007-03-01T00:00Z/2007-04-01T00:00Z');
+    assert.equal(explicit.endDerived, undefined);
+  });
+
+  test('duration designators exclude the parser validity flag', () => {
+    const r = evaluateIso('P1Y2M3DT4H');
+    assert.deepEqual(r.designators, { Y: 1, M: 2, D: 3, H: 4 });
+  });
+
   test('unbounded repeats read as forever, or until the end date', () => {
     const forever = evaluateIso('R-1/2009-07-01T00:00Z/P1M');
     assert.equal(forever.repeat, -1);

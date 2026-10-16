@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.13.0 - 2026-10-16
+
+- `/tools/`: an interval's missing bound is derived from the other one — `R5/P1Y/2025-05-01T13:00:00Z` now shows its start (end minus five years) and `R3/2024-03-01T10:00Z/P1M` its end, labelled "Start (derived)" and "End (derived)"; an unbounded `R-1` leaves the open side out
+- `/tools/`: every point in time (start, end, next start, expires, a parsed date) is a `<time datetime>` holding the ISO timestamp in code with the local time beside it, formatted as `2020-05-01 15:00:00 CEST` in the viewer's zone (sv-SE order, zero-padded hours, 24-hour clock); the date result's UTC and Local rows merged into one
+- `/tools/`: `P1D/2024-03-05` auto-detects as an interval — the slash wins over the leading `P`, which used to make it a duration
+- `/tools/`: the duration designators row no longer leaks the parser's `isValid` flag
+
 ## v1.12.0 - 2026-10-13
 
 - `/dmn/`: DMN imports resolve from dropped files — every `.dmn` dropped on the panel is kept by namespace, and a model that imports one of them evaluates through it (drop them together or one after the other; dropping a missing import keeps the source as is). The declared imports are listed under the source as loaded or missing, and a `locationURI` is never fetched

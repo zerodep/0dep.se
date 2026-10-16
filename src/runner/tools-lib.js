@@ -30,11 +30,30 @@ function describeRepeat(repeat, hasEnd) {
   return `${repeat} times`;
 }
 
-/** Guess what the user pasted: a duration starts with (−)P, an interval has a slash or R-prefix, else a date. */
+/**
+ * The interval's first start and last end. One of them may be missing from the source —
+ * `P1Y/2025-05-01` or `R3/2024-03-01/P1M` — but follows from the other bound, the duration
+ * and the repeat count. An unbounded repeat (R-1) has no such bound and leaves it undefined.
+ */
+function intervalBounds(interval) {
+  const { startDate, endDate, duration, repeat } = interval;
+  const bounded = duration && repeat !== -1;
+  const times = repeat ?? 1;
+  const start = startDate ?? (bounded && endDate ? duration.getStartAt(endDate, times) : null);
+  const end = endDate ?? (bounded && startDate ? duration.getExpireAt(startDate, times) : null);
+  return {
+    start: start ? start.toISOString() : undefined,
+    startDerived: start && !startDate ? true : undefined,
+    end: end ? end.toISOString() : undefined,
+    endDerived: end && !endDate ? true : undefined,
+  };
+}
+
+/** Guess what the user pasted: an interval has a slash (P1D/2024-03-05 included), a duration starts with (−)P, else a date. */
 export function detectIsoKind(source) {
   const s = source.trim();
+  if (s.includes('/')) return 'interval';
   if (/^[-−+]?P/i.test(s)) return 'duration';
-  if (s.includes('/') || /^R-?\d*\//.test(s)) return 'interval';
   return 'date';
 }
 
@@ -53,6 +72,7 @@ export function evaluateIso(source, { kind = 'auto', enforceUTC = false, now = n
         const interval = parseInterval(input, enforceUTC);
         const startAt = interval.getStartAt(now);
         const expireAt = interval.getExpireAt(now);
+        const { start, startDerived, end, endDerived } = intervalBounds(interval);
         return {
           ok: true,
           kind: 'interval',
@@ -61,8 +81,10 @@ export function evaluateIso(source, { kind = 'auto', enforceUTC = false, now = n
           repeat: interval.repeat,
           repeatText: describeRepeat(interval.repeat, Boolean(interval.endDate)),
           normalized: interval.toJSON(),
-          start: interval.startDate ? interval.startDate.toISOString() : undefined,
-          end: interval.endDate ? interval.endDate.toISOString() : undefined,
+          start,
+          startDerived,
+          end,
+          endDerived,
           duration: interval.duration ? interval.duration.toString() : undefined,
           startAt: startAt ? startAt.toISOString() : undefined,
           expireAt: expireAt ? expireAt.toISOString() : undefined,
@@ -70,7 +92,8 @@ export function evaluateIso(source, { kind = 'auto', enforceUTC = false, now = n
       }
       case 'duration': {
         const duration = parseDuration(input);
-        const { sign = 1, ...designators } = duration.result ?? {};
+        // the parsed result carries the sign and the parser's own validity flag next to the designators
+        const { sign = 1, isValid: _valid, ...designators } = duration.result ?? {};
         return {
           ok: true,
           kind: 'duration',

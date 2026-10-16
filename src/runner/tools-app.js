@@ -47,10 +47,41 @@ function code(text) {
   return el;
 }
 
+/**
+ * The viewer's local time, always as ISO-like `2020-05-01 15:00:00 CEST` — the sv-SE locale orders it that way,
+ * and the explicit 2-digit parts keep morning hours padded (bare sv-SE prints `8:03:04`).
+ */
+const LOCAL_FORMAT = new Intl.DateTimeFormat('sv-SE', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+  timeZoneName: 'short',
+});
+
 function localDate(iso) {
   if (!iso) return undefined;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? undefined : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? undefined : LOCAL_FORMAT.format(d);
+}
+
+/** A point in time: a <time> holding the ISO timestamp in code, with the viewer's local rendering beside it. */
+function when(iso) {
+  if (!iso) return undefined;
+  const time = document.createElement('time');
+  time.dateTime = iso;
+  time.append(code(iso));
+  const local = localDate(iso);
+  if (local) {
+    const span = document.createElement('span');
+    span.className = 'local';
+    span.textContent = local;
+    time.append(' ', span);
+  }
+  return time;
 }
 
 function renderResult(container, { ok, headline, invalid = false, details, error }) {
@@ -100,22 +131,21 @@ function runIso(input, options) {
           row(dl, 'Normalized', code(result.normalized));
           row(dl, 'Components', `${result.flags.join(' + ')} (type ${result.type})`);
           row(dl, 'Repeat', result.repeatText);
-          row(dl, 'Start', result.start && code(result.start));
+          row(dl, result.startDerived ? 'Start (derived)' : 'Start', when(result.start));
           row(dl, 'Duration', result.duration && code(result.duration));
-          row(dl, 'End', result.end && code(result.end));
-          row(dl, 'Next start (from now)', result.startAt && `${result.startAt} — ${localDate(result.startAt)}`);
-          row(dl, 'Expires (from now)', result.expireAt && `${result.expireAt} — ${localDate(result.expireAt)}`);
+          row(dl, result.endDerived ? 'End (derived)' : 'End', when(result.end));
+          row(dl, 'Next start (from now)', when(result.startAt));
+          row(dl, 'Expires (from now)', when(result.expireAt));
           break;
         case 'duration':
           row(dl, 'Normalized', code(result.normalized));
           row(dl, 'Sign', result.sign < 0 ? 'negative (−)' : 'positive');
           row(dl, 'Designators', Object.entries(result.designators).map(([k, v]) => `${k}=${v}`).join(', '));
           row(dl, 'Milliseconds (from now)', result.milliseconds);
-          row(dl, 'Expires (from now)', `${result.expireAt} — ${localDate(result.expireAt)}`);
+          row(dl, 'Expires (from now)', when(result.expireAt));
           break;
         default:
-          row(dl, 'UTC', code(result.date));
-          row(dl, 'Local', localDate(result.date));
+          row(dl, 'Date', when(result.date));
           row(dl, 'Epoch ms', result.epoch);
           row(dl, 'ISO week', code(result.week));
           row(dl, 'Weekday (UTC)', result.weekday);
