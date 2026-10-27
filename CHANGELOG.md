@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.1 - 2026-10-27
+
+- upgrade `croner@11`
+
 ## v1.13.0 - 2026-10-16
 
 - `/tools/`: an interval's missing bound is derived from the other one — `R5/P1Y/2025-05-01T13:00:00Z` now shows its start (end minus five years) and `R3/2024-03-01T10:00Z/P1M` its end, labelled "Start (derived)" and "End (derived)"; an unbounded `R-1` leaves the open side out
