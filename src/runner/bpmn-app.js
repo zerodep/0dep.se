@@ -31,7 +31,17 @@ const propertiesTitle = document.querySelector('#properties-title');
 const propertiesTaken = document.querySelector('#properties-taken');
 const propertiesBody = document.querySelector('#properties-body');
 
-const REF_KEYS = new Set(['sourceRef', 'targetRef', 'default', 'attachedToRef', 'processRef', 'calledElement', 'messageRef', 'signalRef', 'errorRef']);
+const REF_KEYS = new Set([
+  'sourceRef',
+  'targetRef',
+  'default',
+  'attachedToRef',
+  'processRef',
+  'calledElement',
+  'messageRef',
+  'signalRef',
+  'errorRef',
+]);
 
 /** @type {{ name: string, source: string, decisions: { id: string, name?: string }[] }[]} */
 const dmnFiles = [];
@@ -84,7 +94,7 @@ exampleBtn?.addEventListener('click', async () => {
     sourceEl.value = bpmn;
     variablesEl.value = '{ "order": { "total": 250 } }';
     validateVariables();
-    await addDmnFile({ name: 'discount.dmn', text: async () => dmn });
+    await addDmnFile({ name: 'discount.dmn', text: () => dmn });
     showDiagram(bpmn);
   } catch (err) {
     logLine(`failed to load example — ${err?.message || err}`, { className: 'error' });
@@ -186,7 +196,7 @@ async function run() {
     session = current;
   } catch (err) {
     setRunState('errored');
-    logLine(String(err && err.message || err), { className: 'error' });
+    logLine(String((err && err.message) || err), { className: 'error' });
     runBtn.disabled = false;
     return;
   }
@@ -263,7 +273,7 @@ async function drive(current, resume) {
   } catch (err) {
     if (session === current) session = null;
     setRunState('errored');
-    logLine(String(err && err.message || err), { className: 'error' });
+    logLine(String((err && err.message) || err), { className: 'error' });
   } finally {
     runningDefinition = null;
     pendingSwitch = null;
@@ -312,7 +322,7 @@ function parseVariables(raw) {
   try {
     variables = JSON.parse(json);
   } catch (err) {
-    throw new Error(`variables is not valid JSON — ${err.message}`);
+    throw new Error(`variables is not valid JSON — ${err.message}`, { cause: err });
   }
   if (!variables || typeof variables !== 'object' || Array.isArray(variables)) {
     throw new Error('variables must be a JSON object');
@@ -436,9 +446,13 @@ function logWait(entry) {
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => {
-      entry.api.cancel();
-    }, { once: true });
+    cancelBtn.addEventListener(
+      'click',
+      () => {
+        entry.api.cancel();
+      },
+      { once: true },
+    );
     li.append(' ', cancelBtn);
     buttons.push(cancelBtn);
   }
@@ -464,11 +478,15 @@ function logTimer(entry) {
   cancelBtn.type = 'button';
   cancelBtn.textContent = 'Cancel';
   const removeOpenWait = trackOpenWait(entry.id, { li, btn: cancelBtn });
-  cancelBtn.addEventListener('click', () => {
-    cancelBtn.disabled = true;
-    removeOpenWait();
-    entry.api.cancel();
-  }, { once: true });
+  cancelBtn.addEventListener(
+    'click',
+    () => {
+      cancelBtn.disabled = true;
+      removeOpenWait();
+      entry.api.cancel();
+    },
+    { once: true },
+  );
 
   li.append(' ', cancelBtn);
   logEl.append(li);
@@ -482,10 +500,14 @@ function logLine(text, { className, action } = {}) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = action.label;
-    btn.addEventListener('click', () => {
-      btn.disabled = true;
-      action.onClick();
-    }, { once: true });
+    btn.addEventListener(
+      'click',
+      () => {
+        btn.disabled = true;
+        action.onClick();
+      },
+      { once: true },
+    );
     li.append(' ', btn);
   }
   logEl.append(li);
@@ -570,6 +592,7 @@ function getViewer() {
             try {
               viewer.get('canvas').zoom('fit-viewport');
             } catch {
+              /* a hidden or empty canvas cannot be fitted — the next resize retries */
             }
           });
         }).observe(canvasEl);
@@ -617,7 +640,12 @@ function diagramMarkers(viewer) {
 
 function showProperties(element) {
   const businessObject = element?.businessObject;
-  if (!businessObject || element.type === 'label' || businessObject.$type === 'bpmn:Process' || businessObject.$type === 'bpmn:Collaboration') {
+  if (
+    !businessObject ||
+    element.type === 'label' ||
+    businessObject.$type === 'bpmn:Process' ||
+    businessObject.$type === 'bpmn:Collaboration'
+  ) {
     propertiesEl.hidden = true;
     return false;
   }
@@ -633,19 +661,23 @@ function showProperties(element) {
 /** A moddle business object as readable JSON, references collapsed to ids. */
 export function moddleProperties(businessObject) {
   const seen = new WeakSet();
-  return JSON.stringify(businessObject, function replacer(key, value) {
-    if (key !== '$type' && key !== '$attrs' && key.startsWith('$')) return undefined;
-    if (key === 'di') return undefined;
-    if (value?.$type) {
-      if (REF_KEYS.has(key)) return value.id;
-      if (seen.has(value)) return `[circular ${value.id || value.$type}]`;
-      seen.add(value);
-    }
-    if ((key === 'incoming' || key === 'outgoing') && Array.isArray(value)) {
-      return value.map((v) => v?.id ?? v);
-    }
-    return value;
-  }, 2);
+  return JSON.stringify(
+    businessObject,
+    function replacer(key, value) {
+      if (key !== '$type' && key !== '$attrs' && key.startsWith('$')) return undefined;
+      if (key === 'di') return undefined;
+      if (value?.$type) {
+        if (REF_KEYS.has(key)) return value.id;
+        if (seen.has(value)) return `[circular ${value.id || value.$type}]`;
+        seen.add(value);
+      }
+      if ((key === 'incoming' || key === 'outgoing') && Array.isArray(value)) {
+        return value.map((v) => v?.id ?? v);
+      }
+      return value;
+    },
+    2,
+  );
 }
 
 /** Times an element was taken in the current run. */
@@ -655,9 +687,7 @@ export function takenCount(id) {
 
 function renderTakenLine(id) {
   const count = takenCount(id);
-  propertiesTaken.textContent = count
-    ? `taken ${count} time${count === 1 ? '' : 's'} this run`
-    : 'not taken this run';
+  propertiesTaken.textContent = count ? `taken ${count} time${count === 1 ? '' : 's'} this run` : 'not taken this run';
 }
 
 // --- files ---
@@ -668,9 +698,7 @@ async function addDmnFile(file) {
     const decisions = await listDmnDecisions(source);
     const entry = { name: file.name, source, decisions };
     const ids = new Set(decisions.map((d) => d.id));
-    const existing = dmnFiles.findIndex(
-      (f) => f.name === entry.name || f.decisions.some((d) => ids.has(d.id)),
-    );
+    const existing = dmnFiles.findIndex((f) => f.name === entry.name || f.decisions.some((d) => ids.has(d.id)));
     if (existing >= 0) dmnFiles[existing] = entry;
     else dmnFiles.push(entry);
     renderDmnList();
@@ -686,18 +714,20 @@ function renderDmnList() {
   dmnListEl.textContent = '';
   for (const [index, file] of dmnFiles.entries()) {
     const li = document.createElement('li');
-    const decisions = file.decisions
-      .map((d) => (d.name ? `${d.name} (${d.id})` : d.id))
-      .join(', ');
+    const decisions = file.decisions.map((d) => (d.name ? `${d.name} (${d.id})` : d.id)).join(', ');
     li.append(`${file.name} — ${decisions || 'no decisions'}`);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Remove';
     remove.className = 'secondary';
-    remove.addEventListener('click', () => {
-      dmnFiles.splice(index, 1);
-      renderDmnList();
-    }, { once: true });
+    remove.addEventListener(
+      'click',
+      () => {
+        dmnFiles.splice(index, 1);
+        renderDmnList();
+      },
+      { once: true },
+    );
     li.append(' ', remove);
     dmnListEl.append(li);
   }

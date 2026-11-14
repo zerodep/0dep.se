@@ -231,7 +231,11 @@ async function dmnDecisionServices(dmnSources, onDmnLog, services) {
     for (const { id } of listDecisions(rootElement)) {
       decisionServices[id] = function evaluateDecision(executionMessage, callback) {
         const input = { ...this?.environment?.variables, ...executionMessage?.content?.input };
-        onDmnLog?.({ scope: 'dmn:decision', level: 'debug', message: `<${id}> input ${JSON.stringify(input, null, 1).replace(/\n\s*/g, ' ')}` });
+        onDmnLog?.({
+          scope: 'dmn:decision',
+          level: 'debug',
+          message: `<${id}> input ${JSON.stringify(input, null, 1).replace(/\n\s*/g, ' ')}`,
+        });
         definition.evaluate(id, input, callback);
       };
     }
@@ -247,9 +251,7 @@ function warnLiteralConditions(context, onWarning) {
     const body = flow.behaviour?.conditionExpression?.body;
     if (typeof body !== 'string' || !body.trim()) continue;
     if (feel.isExpression(body) || templates.hasExpression(body)) continue;
-    onWarning(
-      `condition on <${flow.id}> is neither FEEL (leading =) nor a \${...} template — the flow is always taken`,
-    );
+    onWarning(`condition on <${flow.id}> is neither FEEL (leading =) nor a \${...} template — the flow is always taken`);
   }
 }
 
@@ -293,16 +295,19 @@ function passThroughScripts() {
 
 /** Services where any unregistered name resolves to a stub that completes with no variables. */
 function stubbedServices(services = {}, onServiceCall) {
-  return new Proxy({ ...services }, {
-    get(target, name) {
-      if (name in target) return target[name];
-      if (typeof name !== 'string') return undefined;
-      return function serviceStub(elementApi, callback) {
-        onServiceCall?.(name, elementApi);
-        callback(null, {});
-      };
+  return new Proxy(
+    { ...services },
+    {
+      get(target, name) {
+        if (name in target) return target[name];
+        if (typeof name !== 'string') return undefined;
+        return function serviceStub(elementApi, callback) {
+          onServiceCall?.(name, elementApi);
+          callback(null, {});
+        };
+      },
     },
-  });
+  );
 }
 
 /**

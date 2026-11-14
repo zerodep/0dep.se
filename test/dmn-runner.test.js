@@ -84,7 +84,10 @@ test('take-once.dmn: takeOnce grants only the first caller across the requiremen
   const { result, trace } = await evaluateDecision(definition, 'grantTotal', { amount: 100 });
   assert.equal(result, 100, 'only one of the two grant decisions should take the grant');
   const grants = trace.filter((t) => t.id === 'firstGrant' || t.id === 'secondGrant').map((t) => t.result);
-  assert.deepEqual(grants.sort((a, b) => b - a), [100, 0]);
+  assert.deepEqual(
+    grants.sort((a, b) => b - a),
+    [100, 0],
+  );
 });
 
 test('exchange.dmn: a sync service backed by async-loaded data resolves the rate', async () => {
@@ -161,12 +164,9 @@ test('a promise-returning service fails the evaluation loudly', async () => {
   // the parameter matters — feelin parses the signature for arity and
   // resolves a mismatched invocation to null without calling the service
   const { definition } = await createDmnRunner(dmn, {
-    services: { exchangeRate: async (currency) => (currency ? 1.25 : 0) },
+    services: { exchangeRate: (currency) => Promise.resolve(currency ? 1.25 : 0) },
   });
-  await assert.rejects(
-    evaluateDecision(definition, 'convertedAmount', { amount: 100, currency: 'USD' }),
-    /synchronous/,
-  );
+  await assert.rejects(evaluateDecision(definition, 'convertedAmount', { amount: 100, currency: 'USD' }), /synchronous/);
 });
 
 test('a decision table without an output column parses but fails evaluation loudly', async () => {
@@ -186,14 +186,11 @@ test('a decision table without an output column parses but fails evaluation loud
   const { definition, decisions } = await createDmnRunner(source);
   assert.deepEqual(decisions, [{ id: 'discount', name: 'Discount', type: 'dmn:Decision' }], 'parse succeeds — the gap is not caught here');
 
-  await assert.rejects(
-    evaluateDecision(definition, 'discount', { total: 250 }),
-    (err) => {
-      assert.equal(err.constructor.name, 'DecisionError');
-      assert.match(err.message, /<table> decision table has no output/);
-      return true;
-    },
-  );
+  await assert.rejects(evaluateDecision(definition, 'discount', { total: 250 }), (err) => {
+    assert.equal(err.constructor.name, 'DecisionError');
+    assert.match(err.message, /<table> decision table has no output/);
+    return true;
+  });
 });
 
 test('listImports returns the declared imports of a parsed DMN', async () => {
@@ -210,7 +207,10 @@ test('listImports returns the declared imports of a parsed DMN', async () => {
 test('createDmnRunner exposes the declared imports', async () => {
   const order = await readFile(join(resources, 'order.dmn'), 'utf8');
   const { imports } = await createDmnRunner(order);
-  assert.deepEqual(imports.map((i) => i.namespace), ['https://example.com/dmn/shipping']);
+  assert.deepEqual(
+    imports.map((i) => i.namespace),
+    ['https://example.com/dmn/shipping'],
+  );
 });
 
 test('import library parses added models and lists them by namespace', async () => {
@@ -223,13 +223,22 @@ test('import library parses added models and lists them by namespace', async () 
   assert.equal(added.name, 'Shipping');
   assert.equal(added.label, 'shipping.dmn');
   assert.deepEqual(added.imports, []);
-  assert.deepEqual(added.decisions.map((d) => d.id), ['shippingFee']);
+  assert.deepEqual(
+    added.decisions.map((d) => d.id),
+    ['shippingFee'],
+  );
   assert.ok(library.has('https://example.com/dmn/shipping'));
-  assert.deepEqual(library.list().map((m) => m.label), ['shipping.dmn']);
+  assert.deepEqual(
+    library.list().map((m) => m.label),
+    ['shipping.dmn'],
+  );
 
   // the same namespace added again replaces the earlier model
   await library.add(await readFile(join(resources, 'shipping.dmn'), 'utf8'), 'shipping-v2.dmn');
-  assert.deepEqual(library.list().map((m) => m.label), ['shipping-v2.dmn']);
+  assert.deepEqual(
+    library.list().map((m) => m.label),
+    ['shipping-v2.dmn'],
+  );
 
   await assert.rejects(library.add('not dmn', 'nope.dmn'));
   assert.equal(library.list().length, 1, 'a rejected add must not leave a model behind');
@@ -244,7 +253,10 @@ test('a decision requiring an imported decision evaluates through the import lib
   const { definition } = await createDmnRunner(order, { resolveImport: library.resolveImport });
   const { result, trace } = await evaluateDecision(definition, 'orderTotal', { total: 100, parcel: { weight: 12 } });
   assert.equal(result, 150);
-  assert.ok(trace.some((t) => t.id === 'shippingFee'), 'imported decision should land in the trace');
+  assert.ok(
+    trace.some((t) => t.id === 'shippingFee'),
+    'imported decision should land in the trace',
+  );
 });
 
 test('an import missing from the library fails the evaluation — nothing is fetched', async () => {
@@ -252,7 +264,7 @@ test('an import missing from the library fails the evaluation — nothing is fet
   const library = createImportLibrary();
   const originalFetch = globalThis.fetch;
   let fetched = 0;
-  globalThis.fetch = async () => {
+  globalThis.fetch = () => {
     fetched++;
     throw new Error('must not fetch');
   };

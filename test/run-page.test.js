@@ -85,8 +85,14 @@ test('run page has stats in their own collapsible, split from the execution log'
   assert.ok(table, 'stats table not found in stats details');
   assert.ok(table.querySelector('tbody#stats-body'), 'stats tbody missing');
   const headers = [...table.querySelectorAll('th')].map((th) => th.textContent.toLowerCase());
-  assert.ok(headers.some((h) => h.includes('runs')), 'stats should have a runs column');
-  assert.ok(headers.some((h) => h.includes('ms')), 'stats should have a time column');
+  assert.ok(
+    headers.some((h) => h.includes('runs')),
+    'stats should have a runs column',
+  );
+  assert.ok(
+    headers.some((h) => h.includes('ms')),
+    'stats should have a time column',
+  );
   assert.ok(statsDetails.querySelector('#stats-total'), 'stats total line missing');
 
   const logDetails = runDoc.querySelector('#log-details');
@@ -95,10 +101,7 @@ test('run page has stats in their own collapsible, split from the execution log'
     statsDetails.compareDocumentPosition(logDetails) & 4, // DOCUMENT_POSITION_FOLLOWING
     'stats section should come above the log',
   );
-  assert.ok(
-    statsDetails.querySelector('summary #run-state'),
-    'stats summary should carry the running definition state',
-  );
+  assert.ok(statsDetails.querySelector('summary #run-state'), 'stats summary should carry the running definition state');
 });
 
 test('run page has a hidden properties panel for clicked diagram elements', () => {
@@ -164,7 +167,10 @@ test('example resources are copied verbatim to dist/run', async () => {
 
 test('bpmn-js viewer is split into a lazily loaded module chunk', async () => {
   const chunks = await readdir(join(distDir, 'run', 'chunks'));
-  assert.ok(chunks.some((f) => f.endsWith('.js')), 'no js chunk emitted');
+  assert.ok(
+    chunks.some((f) => f.endsWith('.js')),
+    'no js chunk emitted',
+  );
   const app = await readFile(join(distDir, 'run', 'app.js'), 'utf8');
   assert.ok(app.includes('import('), 'app.js should dynamically import the viewer chunk');
 });
@@ -230,10 +236,7 @@ test('run page has crawlable about content matching the FAQ', () => {
     .flatMap((d) => (Array.isArray(d) ? d : [d]))
     .find((d) => d['@type'] === 'FAQPage');
   for (const q of faqLd.mainEntity) {
-    assert.ok(
-      about.textContent.includes(q.name),
-      `FAQ question should be visible on the page: ${q.name}`,
-    );
+    assert.ok(about.textContent.includes(q.name), `FAQ question should be visible on the page: ${q.name}`);
   }
 });
 

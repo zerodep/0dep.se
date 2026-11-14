@@ -89,7 +89,11 @@ test('interval dates are shown as ISO code with the local time beside it, includ
     const local = dd.querySelector('.local');
     assert.ok(local, `${label} should show the local time`);
     assert.match(local.textContent, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+$/, 'local time is ISO-like via the sv-SE locale');
-    assert.equal(new Date(local.textContent.replace(/ \S+$/, '')).getTime(), new Date(iso.textContent).getTime(), 'local reads back as the same instant');
+    assert.equal(
+      new Date(local.textContent.replace(/ \S+$/, '')).getTime(),
+      new Date(iso.textContent).getTime(),
+      'local reads back as the same instant',
+    );
   }
   await waitFor(() => document.querySelectorAll('#history-list li').length === 2);
 });

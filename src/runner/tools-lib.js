@@ -150,7 +150,15 @@ export function evaluateOcr(source, { mode = 'validate', fixedLength, fixedLengt
       if (result.error_code) {
         return { ok: false, mode, errorCode: result.error_code, error: result.message || result.error_code };
       }
-      return { ok: true, mode, numbers: result.numbers, lengthControl: result.lengthControl, control: result.control, length: result.length, sum: result.sum };
+      return {
+        ok: true,
+        mode,
+        numbers: result.numbers,
+        lengthControl: result.lengthControl,
+        control: result.control,
+        length: result.length,
+        sum: result.sum,
+      };
     }
 
     const result = validate(input, range);

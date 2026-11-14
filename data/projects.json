@@ -49,12 +49,7 @@
           "description": "ISO 8601 parser for intervals, durations, dates, and week numbers. Converts to milliseconds, ISO strings, and Date objects with full standard coverage.",
           "repo": "https://github.com/zerodep/piso",
           "npm": "@0dep/piso",
-          "tags": [
-            "iso-8601",
-            "duration",
-            "interval",
-            "parser"
-          ],
+          "tags": ["iso-8601", "duration", "interval", "parser"],
           "runtimeDeps": [],
           "peerDeps": [],
           "link": {
@@ -68,18 +63,9 @@
           "description": "Pino logger transport that forwards structured logs to Azure Application Insights. Compatible with both v2 and v3 of the Application Insights SDK.",
           "repo": "https://github.com/zerodep/pino-applicationinsights",
           "npm": "@0dep/pino-applicationinsights",
-          "tags": [
-            "logging",
-            "pino",
-            "azure",
-            "telemetry"
-          ],
+          "tags": ["logging", "pino", "azure", "telemetry"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "@opentelemetry/api",
-            "applicationinsights",
-            "pino-abstract-transport"
-          ]
+          "peerDeps": ["@opentelemetry/api", "applicationinsights", "pino-abstract-transport"]
         },
         {
           "slug": "ocrgenerator",
@@ -87,12 +73,7 @@
           "description": "Swedish invoice number (OCR/fakturanummer) generator and validator. Supports Bankgirot and Plusgirot reference formats with modulus-10 (Luhn) check digits.",
           "repo": "https://github.com/zerodep/ocrgenerator",
           "npm": "ocrgenerator",
-          "tags": [
-            "sweden",
-            "invoice",
-            "luhn",
-            "validator"
-          ],
+          "tags": ["sweden", "invoice", "luhn", "validator"],
           "runtimeDeps": [],
           "peerDeps": [],
           "link": {
@@ -106,12 +87,7 @@
           "description": "Run the JavaScript code blocks in your README as live tests. Keeps documentation honest by failing CI when an example breaks.",
           "repo": "https://github.com/zerodep/texample",
           "npm": "texample",
-          "tags": [
-            "docs",
-            "testing",
-            "markdown",
-            "ci"
-          ],
+          "tags": ["docs", "testing", "markdown", "ci"],
           "runtimeDeps": [],
           "peerDeps": []
         },
@@ -121,12 +97,7 @@
           "description": "Generate a GitHub flavoured table of contents for markdown files. String in, string out, slugs match GitHub's anchors, and only the text between the toc markers is ever touched. Ships a CLI for keeping READMEs fresh.",
           "repo": "https://github.com/zerodep/toc",
           "npm": "@0dep/toc",
-          "tags": [
-            "markdown",
-            "readme",
-            "toc",
-            "cli"
-          ],
+          "tags": ["markdown", "readme", "toc", "cli"],
           "runtimeDeps": [],
           "peerDeps": [],
           "link": {
@@ -140,15 +111,8 @@
           "description": "In-memory AMQP broker emulator for integration tests. Listens on a real TCP port and speaks both AMQP 0-9-1 and 1.0, so amqplib, rhea, and the Azure Service Bus SDK all work against it without a broker container.",
           "repo": "https://github.com/zerodep/amqp-emulator",
           "npm": "amqp-emulator",
-          "tags": [
-            "amqp",
-            "rabbitmq",
-            "testing",
-            "broker"
-          ],
-          "runtimeDeps": [
-            "smqp"
-          ],
+          "tags": ["amqp", "rabbitmq", "testing", "broker"],
+          "runtimeDeps": ["smqp"],
           "peerDeps": []
         }
       ]
@@ -168,20 +132,9 @@
           "description": "BPMN 2.0 execution engine for Node.js and the browser. Runs business processes defined in standard BPMN XML, with TypeScript types, ESM/CJS support, and granular debug logging.",
           "repo": "https://github.com/paed01/bpmn-engine",
           "npm": "bpmn-engine",
-          "tags": [
-            "bpmn",
-            "workflow",
-            "engine",
-            "process"
-          ],
+          "tags": ["bpmn", "workflow", "engine", "process"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "bpmn-elements",
-            "bpmn-moddle",
-            "debug",
-            "moddle-context-serializer",
-            "smqp"
-          ]
+          "peerDeps": ["bpmn-elements", "bpmn-moddle", "debug", "moddle-context-serializer", "smqp"]
         },
         {
           "slug": "bpmn-middleware",
@@ -189,24 +142,9 @@
           "description": "Express middleware that runs the BPMN engine inside a Node.js HTTP application. Handles process state, call activities, and workflow orchestration over REST.",
           "repo": "https://github.com/zerodep/bpmn-middleware",
           "npm": "bpmn-middleware",
-          "tags": [
-            "bpmn",
-            "express",
-            "workflow",
-            "middleware"
-          ],
-          "runtimeDeps": [
-            "lru-cache",
-            "multer"
-          ],
-          "peerDeps": [
-            "@0dep/piso",
-            "bpmn-elements",
-            "bpmn-engine",
-            "debug",
-            "express",
-            "smqp"
-          ]
+          "tags": ["bpmn", "express", "workflow", "middleware"],
+          "runtimeDeps": ["lru-cache", "multer"],
+          "peerDeps": ["@0dep/piso", "bpmn-elements", "bpmn-engine", "debug", "express", "smqp"]
         },
         {
           "slug": "bpmn-elements",
@@ -214,15 +152,8 @@
           "description": "Executable workflow elements that implement the BPMN 2.0 specification. The building blocks behind bpmn-engine, usable on their own to assemble custom runtimes.",
           "repo": "https://github.com/paed01/bpmn-elements",
           "npm": "bpmn-elements",
-          "tags": [
-            "bpmn",
-            "workflow",
-            "elements"
-          ],
-          "runtimeDeps": [
-            "smqp",
-            "@0dep/piso"
-          ],
+          "tags": ["bpmn", "workflow", "elements"],
+          "runtimeDeps": ["smqp", "@0dep/piso"],
           "peerDeps": []
         },
         {
@@ -235,16 +166,9 @@
             "href": "/dmn/",
             "label": "Evaluate a decision"
           },
-          "tags": [
-            "dmn",
-            "decision-table",
-            "feel",
-            "drg"
-          ],
+          "tags": ["dmn", "decision-table", "feel", "drg"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "feelin"
-          ]
+          "peerDeps": ["feelin"]
         },
         {
           "slug": "smqp",
@@ -252,12 +176,7 @@
           "description": "Synchronous in-process message broker with exchanges, queues, topics, and ack/nack semantics. Underpins bpmn-engine and bpmn-elements without pulling in a real broker dependency.",
           "repo": "https://github.com/paed01/smqp",
           "npm": "smqp",
-          "tags": [
-            "messaging",
-            "broker",
-            "queue",
-            "pubsub"
-          ],
+          "tags": ["messaging", "broker", "queue", "pubsub"],
           "runtimeDeps": [],
           "peerDeps": []
         },
@@ -267,15 +186,9 @@
           "description": "Serialize bpmn-moddle contexts to JSON for storage and process state recovery. Pairs with bpmn-engine to persist long-running workflows.",
           "repo": "https://github.com/paed01/moddle-context-serializer",
           "npm": "moddle-context-serializer",
-          "tags": [
-            "bpmn",
-            "serializer",
-            "moddle"
-          ],
+          "tags": ["bpmn", "serializer", "moddle"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "bpmn-moddle"
-          ]
+          "peerDeps": ["bpmn-moddle"]
         },
         {
           "slug": "bpmn-extensions",
@@ -283,19 +196,9 @@
           "description": "Flow extensions for bpmn-elements: FEEL expressions and the Zeebe-namespace BPMN extension elements for Camunda 8 style workflows.",
           "repo": "https://github.com/zerodep/bpmn-extensions",
           "npm": "@0dep/bpmn-extensions",
-          "tags": [
-            "bpmn",
-            "feel",
-            "zeebe",
-            "extensions"
-          ],
-          "runtimeDeps": [
-            "feelin"
-          ],
-          "peerDeps": [
-            "croner",
-            "bpmn-elements"
-          ]
+          "tags": ["bpmn", "feel", "zeebe", "extensions"],
+          "runtimeDeps": ["feelin"],
+          "peerDeps": ["croner", "bpmn-elements"]
         },
         {
           "slug": "onify-flow-extensions",
@@ -303,18 +206,9 @@
           "description": "Onify Flow extensions for bpmn-engine. Adds the service tasks, listeners, and Camunda-style behaviours used by the Onify automation platform.",
           "repo": "https://github.com/onify/flow-extensions",
           "npm": "@onify/flow-extensions",
-          "tags": [
-            "bpmn",
-            "onify",
-            "extensions",
-            "automation"
-          ],
+          "tags": ["bpmn", "onify", "extensions", "automation"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "croner",
-            "@0dep/piso",
-            "bpmn-elements"
-          ]
+          "peerDeps": ["croner", "@0dep/piso", "bpmn-elements"]
         }
       ]
     },
@@ -329,17 +223,9 @@
           "description": "Adds a Swagger / OpenAPI v3 specification to an Express application, derived automatically from the types of the routes registered on the app.",
           "repo": "https://github.com/allernordic/express-swagger",
           "npm": "@aller/express-swagger",
-          "tags": [
-            "express",
-            "openapi",
-            "swagger",
-            "typescript"
-          ],
+          "tags": ["express", "openapi", "swagger", "typescript"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "debug",
-            "typescript"
-          ]
+          "peerDeps": ["debug", "typescript"]
         },
         {
           "slug": "aller-pino-gcp-transport",
@@ -347,17 +233,9 @@
           "description": "Pino transport that emits Google Cloud structured logs to stdout. Drop-in for services running on GKE, Cloud Run, or anywhere GCP scrapes JSON logs.",
           "repo": "https://github.com/allermedia/pino-gcp-transport",
           "npm": "@aller/pino-gcp-transport",
-          "tags": [
-            "pino",
-            "logging",
-            "gcp",
-            "google-cloud"
-          ],
+          "tags": ["pino", "logging", "gcp", "google-cloud"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "sonic-boom",
-            "pino-abstract-transport"
-          ]
+          "peerDeps": ["sonic-boom", "pino-abstract-transport"]
         },
         {
           "slug": "aller-google-cloud-secret",
@@ -365,21 +243,9 @@
           "description": "Concurrency-safe updates of Google Cloud Secret Manager secrets using the secret etag as an optimistic lock, plus a secrets cache and a Secret Manager gRPC emulator for testing without a live project.",
           "repo": "https://github.com/allermedia/google-cloud-secret",
           "npm": "@aller/google-cloud-secret",
-          "tags": [
-            "gcp",
-            "secret-manager",
-            "cache",
-            "testing"
-          ],
+          "tags": ["gcp", "secret-manager", "cache", "testing"],
           "runtimeDeps": [],
-          "peerDeps": [
-            "@google-cloud/secret-manager",
-            "@grpc/grpc-js",
-            "@grpc/proto-loader",
-            "debug",
-            "long",
-            "lru-cache"
-          ]
+          "peerDeps": ["@google-cloud/secret-manager", "@grpc/grpc-js", "@grpc/proto-loader", "debug", "long", "lru-cache"]
         },
         {
           "slug": "onify-fake-amqplib",
@@ -387,15 +253,8 @@
           "description": "In-memory fake of the amqplib RabbitMQ client for unit tests. Drop-in API-compatible replacement so tests don't need a live broker.",
           "repo": "https://github.com/onify/fake-amqplib",
           "npm": "@onify/fake-amqplib",
-          "tags": [
-            "testing",
-            "amqp",
-            "rabbitmq",
-            "mock"
-          ],
-          "runtimeDeps": [
-            "smqp"
-          ],
+          "tags": ["testing", "amqp", "rabbitmq", "mock"],
+          "runtimeDeps": ["smqp"],
           "peerDeps": []
         },
         {
@@ -404,12 +263,7 @@
           "description": "Time-travel for testing time-dependent code. Freeze, travel, and reset the clock — works with Date, hrtime, performance, and timezones.",
           "repo": "https://github.com/paed01/chronokinesis",
           "npm": "chronokinesis",
-          "tags": [
-            "testing",
-            "time",
-            "mock",
-            "timezone"
-          ],
+          "tags": ["testing", "time", "mock", "timezone"],
           "runtimeDeps": [],
           "peerDeps": []
         },
@@ -419,12 +273,7 @@
           "description": "Lightweight coverage for huge projects: finds files never required or imported during testing by comparing the project tree with the require cache and V8 coverage. Ships a CLI, mocha root hooks, and node:test and lab reporters.",
           "repo": "https://github.com/paed01/unnecessary.js",
           "npm": "unnecessary",
-          "tags": [
-            "testing",
-            "coverage",
-            "unused",
-            "node:test"
-          ],
+          "tags": ["testing", "coverage", "unused", "node:test"],
           "runtimeDeps": [],
           "peerDeps": []
         }

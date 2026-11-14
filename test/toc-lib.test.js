@@ -11,9 +11,15 @@ test('a document with markers gets its toc regenerated between them', () => {
   assert.equal(result.pairs.length, 1);
   assert.equal(result.pairs[0].line, 3, 'line numbers are one based');
   assert.equal(result.pairs[0].status, 'updated');
-  assert.match(result.output, /<!-- toc -->\n\n- \[Install\]\(#install\)\n- \[Usage `api`\]\(#usage-api\)\n  - \[Options\]\(#options\)\n\n<!-- \/toc -->/);
+  assert.match(
+    result.output,
+    /<!-- toc -->\n\n- \[Install\]\(#install\)\n- \[Usage `api`\]\(#usage-api\)\n {2}- \[Options\]\(#options\)\n\n<!-- \/toc -->/,
+  );
   assert.ok(result.output.startsWith('# Title\n'), 'nothing above the marker is touched');
-  assert.equal(result.block, '<!-- toc -->\n\n- [Install](#install)\n- [Usage `api`](#usage-api)\n  - [Options](#options)\n\n<!-- /toc -->');
+  assert.equal(
+    result.block,
+    '<!-- toc -->\n\n- [Install](#install)\n- [Usage `api`](#usage-api)\n  - [Options](#options)\n\n<!-- /toc -->',
+  );
 });
 
 test('a document whose toc is already fresh reports up to date and is returned unchanged', () => {
@@ -29,7 +35,7 @@ test('a document without markers gets a toc of every heading as a starting point
   const result = evaluateToc(source);
   assert.equal(result.hasMarkers, false);
   assert.equal(result.pairs.length, 0);
-  assert.match(result.block, /- \[Title\]\(#title\)\n  - \[Install\]\(#install\)\n  - \[Usage\]\(#usage\)/);
+  assert.match(result.block, /- \[Title\]\(#title\)\n {2}- \[Install\]\(#install\)\n {2}- \[Usage\]\(#usage\)/);
   // the output document has the block inserted below the first heading, ready to paste back
   assert.equal(result.changed, true);
   assert.equal(result.output, `# Title\n\n${result.block}\n\nIntro.\n\n## Install\n\n## Usage\n`);

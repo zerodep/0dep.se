@@ -64,16 +64,7 @@ const transparentAssets = ['favicon-32.png', 'favicon-192.png'];
 const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const escape = (s) => String(s).replace(/[&<>"']/g, (c) => escapeMap[c]);
 
-function head({
-  site,
-  title,
-  description,
-  path,
-  keywords = '',
-  ogType = 'website',
-  ogImage = '/og-image.png',
-  csp = '',
-}) {
+function head({ site, title, description, path, keywords = '', ogType = 'website', ogImage = '/og-image.png', csp = '' }) {
   const baseUrl = `https://${site.primaryDomain}`;
   const url = `${baseUrl}${path}`;
   const imageAbs = ogImage.startsWith('http') ? ogImage : `${baseUrl}${ogImage}`;
@@ -158,15 +149,14 @@ function ldAbout(profile, site) {
       description: profile.headline,
       url: `${baseUrl}/about/`,
       ...(profile.avatar ? { image: `${baseUrl}${profile.avatar}` } : {}),
-      sameAs: profile.links
-        .filter((l) => !l.url.startsWith('mailto:'))
-        .map((l) => l.url),
+      sameAs: profile.links.filter((l) => !l.url.startsWith('mailto:')).map((l) => l.url),
     },
   ];
 }
 
 /** BPMN intermediate event — the double ring, which is also the zerodep mark. */
-const RING_SVG = '<svg class="ring" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+const RING_SVG =
+  '<svg class="ring" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
 
 /** Sub-page home link: the ring mark (the logo without its wordmark) plus the back text. */
 function backLink(site) {
@@ -201,8 +191,8 @@ const RUNNER_LIBS = {
 async function readLibVersions(names) {
   const versions = {};
   for (const name of names) {
-    const pkg = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8'));
-    versions[name] = pkg.version;
+    const { version } = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8'));
+    versions[name] = version;
   }
   return versions;
 }
@@ -236,7 +226,8 @@ function renderDeps(p, npmToSlug) {
   };
   const parts = [`${deps.length} dep${deps.length === 1 ? '' : 's'}`];
   if (deps.length > 0) parts.push(`<span class="builds-on">&middot; builds on ${deps.map(link).join(', ')}</span>`);
-  if (peers.length > 0) parts.push(`<span class="peers">&middot; ${peers.length} peer${peers.length === 1 ? '' : 's'}: ${peers.map(link).join(', ')}</span>`);
+  if (peers.length > 0)
+    parts.push(`<span class="peers">&middot; ${peers.length} peer${peers.length === 1 ? '' : 's'}: ${peers.map(link).join(', ')}</span>`);
   return `<div class="deps">${parts.join(' ')}</div>`;
 }
 
@@ -261,9 +252,7 @@ function renderProject(p, npmToSlug = new Map()) {
       </article>`;
 }
 function renderGroup(g, npmToSlug) {
-  const groupLink = g.link
-    ? `\n        <p class="group-link"><a href="${escape(g.link.href)}">${escape(g.link.label)} &rarr;</a></p>`
-    : '';
+  const groupLink = g.link ? `\n        <p class="group-link"><a href="${escape(g.link.href)}">${escape(g.link.label)} &rarr;</a></p>` : '';
   return `    <section class="group lane" id="${escape(g.id)}">
       <header class="group-header">
         <h2 class="lane-label">${escape(g.title)}</h2>
@@ -277,9 +266,7 @@ ${g.projects.map((p) => renderProject(p, npmToSlug)).join('\n')}
 
 function renderHome(manifest) {
   const { site, groups } = manifest;
-  const groupNav = groups
-    .map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`)
-    .join(' &middot; ');
+  const groupNav = groups.map((g) => `<a href="#${escape(g.id)}">${escape(g.title)}</a>`).join(' &middot; ');
   const navLinks = `${groupNav} &middot; <a href="/run/">Run BPMN</a> &middot; <a href="/dmn/">Run DMN</a> &middot; <a href="/tools/">Tools</a> &middot; <a href="/toc/">Markdown TOC</a> &middot; <a href="/about/">About</a>`;
   const ldBlocks = ldHome(manifest).map(jsonLd).join('\n');
   const npmToSlug = new Map(groups.flatMap((g) => g.projects.filter((p) => p.npm).map((p) => [p.npm, p.slug])));
@@ -288,13 +275,13 @@ function renderHome(manifest) {
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: site.seoTitle || `${site.title} — ${site.tagline}`,
-    description: site.seoDescription || site.tagline,
-    path: '/',
-    keywords: (site.keywords || []).join(', '),
-    ogImage: site.ogImage,
-  })}
+  site,
+  title: site.seoTitle || `${site.title} — ${site.tagline}`,
+  description: site.seoDescription || site.tagline,
+  path: '/',
+  keywords: (site.keywords || []).join(', '),
+  ogImage: site.ogImage,
+})}
 </head>
 <body>
   <header class="site-header">
@@ -329,27 +316,21 @@ function avatarPicture(profile) {
 
 function renderAbout(profile, site) {
   const bio = profile.bio.map((p) => `    <p>${escape(p)}</p>`).join('\n');
-  const highlights = profile.highlights
-    .map(
-      (h) => `      <div><dt>${escape(h.label)}</dt><dd>${escape(h.value)}</dd></div>`,
-    )
-    .join('\n');
-  const links = profile.links
-    .map((l) => `      <li><a href="${escape(l.url)}" rel="noopener">${escape(l.label)}</a></li>`)
-    .join('\n');
+  const highlights = profile.highlights.map((h) => `      <div><dt>${escape(h.label)}</dt><dd>${escape(h.value)}</dd></div>`).join('\n');
+  const links = profile.links.map((l) => `      <li><a href="${escape(l.url)}" rel="noopener">${escape(l.label)}</a></li>`).join('\n');
   const ldBlocks = ldAbout(profile, site).map(jsonLd).join('\n');
 
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: profile.seoTitle || `${profile.name} — ${site.title}`,
-    description: profile.seoDescription || `${profile.name} — ${profile.headline}`,
-    path: '/about/',
-    ogType: 'profile',
-    ogImage: profile.ogImage || site.ogImage,
-  })}
+  site,
+  title: profile.seoTitle || `${profile.name} — ${site.title}`,
+  description: profile.seoDescription || `${profile.name} — ${profile.headline}`,
+  path: '/about/',
+  ogType: 'profile',
+  ogImage: profile.ogImage || site.ogImage,
+})}
 </head>
 <body>
   <header class="site-header profile-header">
@@ -431,26 +412,22 @@ function ldRun(site) {
 }
 
 function renderRun(site, versions) {
-  const faq = runFaq
-    .map(
-      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
-    )
-    .join('\n');
+  const faq = runFaq.map(({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`).join('\n');
   const ldBlocks = ldRun(site).map(jsonLd).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: `Run BPMN diagrams online — browser BPMN 2.0 & DMN engine — ${site.title}`,
-    description:
-      'Free online BPMN runner: paste or drop a BPMN 2.0 diagram and execute it in your browser — step through the run, signal user tasks, evaluate DMN decision tables. No upload, no account. Powered by bpmn-elements with FEEL and zeebe extensions.',
-    keywords:
-      'run bpmn online, online bpmn runner, bpmn simulator, bpmn runner, execute bpmn diagram, test bpmn online, bpmn 2.0 engine, browser bpmn engine, dmn decision table online, online bpmn and dmn runner, feel expressions, camunda 7, camunda 8, zeebe, bpmn-elements, bpmn-engine',
-    path: '/run/',
-    // everything is self-hosted; unsafe-inline styles for bpmn-js inline style attributes
-    csp: "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'",
-  })}
+  site,
+  title: `Run BPMN diagrams online — browser BPMN 2.0 & DMN engine — ${site.title}`,
+  description:
+    'Free online BPMN runner: paste or drop a BPMN 2.0 diagram and execute it in your browser — step through the run, signal user tasks, evaluate DMN decision tables. No upload, no account. Powered by bpmn-elements with FEEL and zeebe extensions.',
+  keywords:
+    'run bpmn online, online bpmn runner, bpmn simulator, bpmn runner, execute bpmn diagram, test bpmn online, bpmn 2.0 engine, browser bpmn engine, dmn decision table online, online bpmn and dmn runner, feel expressions, camunda 7, camunda 8, zeebe, bpmn-elements, bpmn-engine',
+  path: '/run/',
+  // everything is self-hosted; unsafe-inline styles for bpmn-js inline style attributes
+  csp: "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'",
+})}
   <link rel="stylesheet" href="/run/diagram-js.css">
   <link rel="stylesheet" href="/run/bpmn-js.css">
 </head>
@@ -596,26 +573,22 @@ function ldDmn(site) {
 }
 
 function renderDmn(site, versions) {
-  const faq = dmnFaq
-    .map(
-      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
-    )
-    .join('\n');
+  const faq = dmnFaq.map(({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`).join('\n');
   const ldBlocks = ldDmn(site).map(jsonLd).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: `Evaluate DMN decisions online — browser DMN runner & decision engine — ${site.title}`,
-    description:
-      'Free online DMN runner and evaluator: paste or drop a DMN file and evaluate decisions in your browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace, FEEL expressions. No upload, no account. Powered by dmn-elements.',
-    keywords:
-      'evaluate dmn online, online dmn runner, dmn evaluator, dmn decision table online, run dmn online, dmn simulator, test dmn decision, camunda dmn, decision requirements graph, drd, dmn 1.3, dmn 1.4, dmn 1.5, decision table hit policy, browser dmn engine, decision engine online, feel expression evaluator, online bpmn and dmn runner, dmn-elements, bpmn-engine',
-    path: '/dmn/',
-    // everything is self-hosted, and unlike /run/ nothing injects inline styles
-    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
-  })}
+  site,
+  title: `Evaluate DMN decisions online — browser DMN runner & decision engine — ${site.title}`,
+  description:
+    'Free online DMN runner and evaluator: paste or drop a DMN file and evaluate decisions in your browser — decision tables with matched-rule highlighting, chained decisions through the requirements graph, evaluation trace, FEEL expressions. No upload, no account. Powered by dmn-elements.',
+  keywords:
+    'evaluate dmn online, online dmn runner, dmn evaluator, dmn decision table online, run dmn online, dmn simulator, test dmn decision, camunda dmn, decision requirements graph, drd, dmn 1.3, dmn 1.4, dmn 1.5, decision table hit policy, browser dmn engine, decision engine online, feel expression evaluator, online bpmn and dmn runner, dmn-elements, bpmn-engine',
+  path: '/dmn/',
+  // everything is self-hosted, and unlike /run/ nothing injects inline styles
+  csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+})}
 </head>
 <body>
   <header class="site-header run-header">
@@ -747,25 +720,21 @@ function ldTools(site) {
 }
 
 function renderTools(site, versions) {
-  const faq = toolsFaq
-    .map(
-      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
-    )
-    .join('\n');
+  const faq = toolsFaq.map(({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`).join('\n');
   const ldBlocks = ldTools(site).map(jsonLd).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: `ISO 8601 parser & bankgiro OCR generator online — ${site.title}`,
-    description:
-      'Free online toolbox: parse and test ISO 8601 dates, durations and intervals, and validate or generate Swedish bankgiro OCR references (modulus 10) — right in your browser, with a local history of your attempts. No upload, no account. Powered by @0dep/piso and ocrgenerator.',
-    keywords:
-      'iso 8601 parser, iso 8601 duration, iso 8601 interval, iso 8601 date, parse iso 8601 online, iso 8601 repeating interval, iso week date, timer cycle bpmn, ocr generator, ocr referensnummer, bankgiro ocr, ocr validator, modulus 10, luhn, ocr kontrollsiffra, längdkontroll, swedish invoice number, @0dep/piso, ocrgenerator',
-    path: '/tools/',
-    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
-  })}
+  site,
+  title: `ISO 8601 parser & bankgiro OCR generator online — ${site.title}`,
+  description:
+    'Free online toolbox: parse and test ISO 8601 dates, durations and intervals, and validate or generate Swedish bankgiro OCR references (modulus 10) — right in your browser, with a local history of your attempts. No upload, no account. Powered by @0dep/piso and ocrgenerator.',
+  keywords:
+    'iso 8601 parser, iso 8601 duration, iso 8601 interval, iso 8601 date, parse iso 8601 online, iso 8601 repeating interval, iso week date, timer cycle bpmn, ocr generator, ocr referensnummer, bankgiro ocr, ocr validator, modulus 10, luhn, ocr kontrollsiffra, längdkontroll, swedish invoice number, @0dep/piso, ocrgenerator',
+  path: '/tools/',
+  csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+})}
 </head>
 <body>
   <header class="site-header run-header">
@@ -908,25 +877,21 @@ function ldToc(site) {
 }
 
 function renderTocPage(site, versions) {
-  const faq = tocFaq
-    .map(
-      ({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`,
-    )
-    .join('\n');
+  const faq = tocFaq.map(({ q, a }) => `        <div><dt>${escape(q)}</dt><dd>${escape(a)}</dd></div>`).join('\n');
   const ldBlocks = ldToc(site).map(jsonLd).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
 ${head({
-    site,
-    title: `Markdown table of contents generator — GitHub flavoured, online — ${site.title}`,
-    description:
-      'Free online markdown table of contents generator: drop a README or paste markdown and get a GitHub flavoured toc with anchors that match GitHub — written between <!-- toc --> markers, nothing else touched. Runs in your browser, no upload, no account. Powered by @0dep/toc.',
-    keywords:
-      'markdown toc, markdown table of contents, table of contents generator, readme toc, readme table of contents, github toc, github markdown anchors, github slug, toc markers, markdown toc online, generate toc markdown, doctoc alternative, markdown-toc, @0dep/toc',
-    path: '/toc/',
-    csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
-  })}
+  site,
+  title: `Markdown table of contents generator — GitHub flavoured, online — ${site.title}`,
+  description:
+    'Free online markdown table of contents generator: drop a README or paste markdown and get a GitHub flavoured toc with anchors that match GitHub — written between <!-- toc --> markers, nothing else touched. Runs in your browser, no upload, no account. Powered by @0dep/toc.',
+  keywords:
+    'markdown toc, markdown table of contents, table of contents generator, readme toc, readme table of contents, github toc, github markdown anchors, github slug, toc markers, markdown toc online, generate toc markdown, doctoc alternative, markdown-toc, @0dep/toc',
+  path: '/toc/',
+  csp: "default-src 'self'; object-src 'none'; base-uri 'self'",
+})}
 </head>
 <body>
   <header class="site-header run-header">
@@ -1088,9 +1053,7 @@ function llmsTxt(manifest) {
   const { site, groups } = manifest;
   const base = `https://${site.primaryDomain}`;
   const groupSections = groups.map((g) => {
-    const projects = g.projects
-      .map((p) => `- [${p.name}](${p.repo}): ${p.description}`)
-      .join('\n');
+    const projects = g.projects.map((p) => `- [${p.name}](${p.repo}): ${p.description}`).join('\n');
     return `## ${g.title}\n\n${projects}`;
   });
   return `# ${site.title}
@@ -1136,7 +1099,10 @@ function sitemapXml(site, { images = {} } = {}) {
   const entries = pages.map(({ path, changefreq, priority }) => {
     const imageTags = (images[path] ?? [])
       .filter(Boolean)
-      .map((src) => `\n    <image:image>\n      <image:loc>${escape(src.startsWith('http') ? src : `${base}${src}`)}</image:loc>\n    </image:image>`)
+      .map(
+        (src) =>
+          `\n    <image:image>\n      <image:loc>${escape(src.startsWith('http') ? src : `${base}${src}`)}</image:loc>\n    </image:image>`,
+      )
       .join('');
     return `  <url>
     <loc>${base}${path}</loc>
@@ -1288,13 +1254,21 @@ export async function build() {
   }
   await writeFile(join(distDir, 'CNAME'), manifest.site.primaryDomain + '\n');
   await writeFile(join(distDir, 'robots.txt'), robotsTxt(manifest.site));
-  await writeFile(join(distDir, 'sitemap.xml'), sitemapXml(manifest.site, {
-    images: { '/': [manifest.site.ogImage], '/about/': [profile.avatar] },
-  }));
+  await writeFile(
+    join(distDir, 'sitemap.xml'),
+    sitemapXml(manifest.site, {
+      images: { '/': [manifest.site.ogImage], '/about/': [profile.avatar] },
+    }),
+  );
   await writeFile(join(distDir, 'llms.txt'), llmsTxt(manifest));
 
   // service workers last — their versions hash the shared styles, fonts and favicons copied above
-  for (const [page, assets] of [['run', runAssets], ['dmn', dmnAssets], ['tools', toolsAssets], ['toc', tocAssets]]) {
+  for (const [page, assets] of [
+    ['run', runAssets],
+    ['dmn', dmnAssets],
+    ['tools', toolsAssets],
+    ['toc', tocAssets],
+  ]) {
     await writeFile(join(distDir, page, 'sw.js'), renderServiceWorker(assets, await serviceWorkerVersion(assets), page));
   }
 
@@ -1302,7 +1276,9 @@ export async function build() {
   let staticFiles = [];
   try {
     staticFiles = await readdir(staticDir);
-  } catch { /* static/ optional */ }
+  } catch {
+    /* static/ optional */
+  }
   for (const f of staticFiles) {
     if (f === '.DS_Store') continue;
     await copyFile(join(staticDir, f), join(distDir, f));
@@ -1312,5 +1288,6 @@ export async function build() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  build().then(({ distDir }) => console.log(`built ${distDir}`));
+  // eslint-disable-next-line no-console
+  build().then((result) => console.log(`built ${result.distDir}`));
 }

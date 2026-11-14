@@ -90,6 +90,13 @@ const TOOLS = [
   },
 ];
 
+class JsonRpcError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
 const METHODS = {
   initialize({ protocolVersion } = {}) {
     return {
@@ -116,13 +123,6 @@ const METHODS = {
     }
   },
 };
-
-class JsonRpcError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.code = code;
-  }
-}
 
 function respond(message) {
   process.stdout.write(JSON.stringify(message) + '\n');

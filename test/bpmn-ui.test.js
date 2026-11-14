@@ -36,7 +36,7 @@ before(async () => {
   // the example loader fetches /run/*.bpmn|dmn — serve them from dist
   globalThis.fetch = async (url) => {
     const content = await readFile(join(repoRoot, 'dist', 'run', basename(String(url))), 'utf8');
-    return { ok: true, text: async () => content };
+    return { ok: true, text: () => content };
   };
   await import('../src/runner/bpmn-app.js');
 });
@@ -142,7 +142,7 @@ test('re-dropping a DMN with the same file name or decision id replaces the entr
 
   const drop = (name, source) => {
     const ev = new window.Event('drop', { cancelable: true });
-    Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: async () => source }] } });
+    Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: () => source }] } });
     document.querySelector('[data-dmn-dropzone]').dispatchEvent(ev);
   };
   const listItems = () => [...document.querySelectorAll('#dmn-list li')];
@@ -181,7 +181,7 @@ test('dropping a new bpmn diagram mid-run stops the run and resets the Run butto
 
   const dropEv = new window.Event('drop', { cancelable: true });
   Object.defineProperty(dropEv, 'dataTransfer', {
-    value: { files: [{ name: 'other.bpmn', text: async () => USER_TASK_SOURCE.replace('Def_ui', 'Def_ui2') }] },
+    value: { files: [{ name: 'other.bpmn', text: () => USER_TASK_SOURCE.replace('Def_ui', 'Def_ui2') }] },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(dropEv);
 
@@ -416,7 +416,10 @@ test('unticking step mode mid-run offers Run, which goes the rest of the way thr
   await waitFor(() => document.querySelector('#output').textContent);
 
   const log = [...document.querySelectorAll('#log li')].map((li) => li.textContent);
-  assert.ok(log.some((line) => /switched to run through/i.test(line)), 'log should note the switch');
+  assert.ok(
+    log.some((line) => /switched to run through/i.test(line)),
+    'log should note the switch',
+  );
   assert.ok(!log.some((line) => /run stopped/i.test(line)), 'the switch is not a stopped run');
   assert.match(document.querySelector('#run-state').textContent, /completed/i);
   assert.equal(stepBtn.disabled, true, 'step should be disabled once the run goes through');
@@ -538,14 +541,14 @@ test('dropping a new diagram forgets the stopped run', async () => {
 
   const dropEv = new window.Event('drop', { cancelable: true });
   Object.defineProperty(dropEv, 'dataTransfer', {
-    value: { files: [{ name: 'other.bpmn', text: async () => TASKS_SOURCE }] },
+    value: { files: [{ name: 'other.bpmn', text: () => TASKS_SOURCE }] },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(dropEv);
   await waitFor(() => document.querySelector('#source').value.includes('Def_uitasks'));
   assert.equal(document.querySelector('#resume').disabled, true, 'a new diagram cannot resume the old run');
 });
 
-test('variables are validated as they are typed', async () => {
+test('variables are validated as they are typed', () => {
   const variables = document.querySelector('#variables');
   const error = document.querySelector('#variables-error');
   const type = (value) => {

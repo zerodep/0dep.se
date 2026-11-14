@@ -8,11 +8,13 @@
     "build": "node src/build.js",
     "pretest": "npm run toc",
     "test": "rm -rf coverage/tmp && NODE_V8_COVERAGE=coverage/tmp node --test --test-concurrency=1 --test-reporter spec --test-reporter-destination stdout --test-reporter unnecessary/node-test --test-reporter-destination stdout test/*.test.js",
-    "posttest": "rm -rf coverage/tmp && npm run test:md",
+    "posttest": "rm -rf coverage/tmp && npm run lint && npm run test:md",
     "test:md": "texample",
+    "lint": "eslint . --cache && prettier . --check --cache",
     "serve": "node src/serve.js",
     "mcp": "node src/mcp-server.js",
-    "toc": "toc -c README.md"
+    "toc": "toc -c README.md",
+    "posttoc": "prettier --write README.md"
   },
   "engines": {
     "node": ">=26"
@@ -23,6 +25,7 @@
     "@0dep/bpmn-extensions": "^1.0.0",
     "@0dep/piso": "^6.0.0",
     "@0dep/toc": "^2.0.0",
+    "@eslint/js": "^10.0.1",
     "amqp-emulator": "^0.1.0",
     "bpmn-elements": "^18.1.0",
     "bpmn-engine": "^26.0.5",
@@ -33,10 +36,13 @@
     "dmn-elements": "^0.4.0",
     "dmn-moddle": "^12.0.1",
     "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
     "happy-dom": "^21.0.1",
-    "moddle-context-serializer": "^6.0.2",
+    "moddle-context-serializer": "^7.0.0",
     "ocrgenerator": "^3.0.0",
-    "texample": "^1.0.2",
+    "prettier": "^3.10.1",
+    "texample": "^2.0.0",
     "unnecessary": "^3.1.0",
     "zeebe-bpmn-moddle": "^2.0.0"
   },
@@ -45,6 +51,9 @@
     "excludeDirs": [
       "dist",
       "coverage"
+    ],
+    "excludeFiles": [
+      "eslint.config.js"
     ]
   }
 }

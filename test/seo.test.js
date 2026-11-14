@@ -53,7 +53,10 @@ test('sitemap.xml lists the home and about images through the image extension', 
   const entries = sitemap.split('<url>').slice(1);
   const home = entries.find((u) => u.includes(`<loc>${base}/</loc>`));
   assert.ok(home, 'home entry');
-  assert.ok(home.includes(`<image:image>\n      <image:loc>${base}${manifest.site.ogImage}</image:loc>\n    </image:image>`), 'home lists the og image');
+  assert.ok(
+    home.includes(`<image:image>\n      <image:loc>${base}${manifest.site.ogImage}</image:loc>\n    </image:image>`),
+    'home lists the og image',
+  );
   const about = entries.find((u) => u.includes(`<loc>${base}/about/</loc>`));
   assert.ok(about, 'about entry');
   assert.ok(about.includes(`<image:loc>${base}${profile.avatar}</image:loc>`), 'about lists the avatar');

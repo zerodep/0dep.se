@@ -30,7 +30,7 @@ function setSource(value) {
 
 function drop(name, source) {
   const ev = new window.Event('drop', { cancelable: true });
-  Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: async () => source }] } });
+  Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: () => source }] } });
   document.querySelector('[data-dropzone]').dispatchEvent(ev);
 }
 
@@ -44,7 +44,11 @@ before(async () => {
   globalThis.document = document;
   Object.defineProperty(globalThis.navigator, 'clipboard', {
     configurable: true,
-    value: { writeText: async (text) => { copied.push(text); } },
+    value: {
+      writeText: (text) => {
+        copied.push(text);
+      },
+    },
   });
   await import('../src/runner/toc-app.js');
 });
@@ -91,7 +95,10 @@ test('markdown without markers lists every heading and honours the wrap options'
     const el = document.querySelector('#toc-block');
     return el.textContent.includes('<details>') ? el : null;
   });
-  assert.match(block.textContent, /^<!-- toc collapsed="Contents" -->\n<details>\n<summary>Contents<\/summary>\n\n- \[Title\]\(#title\)\n  - \[Install\]\(#install\)\n\n<\/details>\n<!-- \/toc -->$/);
+  assert.match(
+    block.textContent,
+    /^<!-- toc collapsed="Contents" -->\n<details>\n<summary>Contents<\/summary>\n\n- \[Title\]\(#title\)\n {2}- \[Install\]\(#install\)\n\n<\/details>\n<!-- \/toc -->$/,
+  );
   assert.match(document.querySelector('#toc-status').textContent, /No toc markers/);
   assert.equal(document.querySelectorAll('#toc-pairs li').length, 0);
   assert.ok(document.querySelector('#output').value.includes('# Title\n\n<!-- toc collapsed="Contents" -->'));

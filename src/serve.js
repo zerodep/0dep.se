@@ -47,5 +47,6 @@ export function createStaticServer(root = resolve('dist')) {
 
 if (import.meta.main) {
   const port = Number(process.env.PORT) || 8080;
+  // eslint-disable-next-line no-console
   createStaticServer().listen(port, () => console.log(`http://localhost:${port}`));
 }

@@ -6,7 +6,15 @@ import { dirname, join } from 'node:path';
 
 const resources = join(dirname(fileURLToPath(import.meta.url)), 'resources');
 
-import { runBpmn, createDefinition, runDefinition, stepDefinition, stopDefinition, switchStepMode, listDmnDecisions } from '../src/runner/bpmn-runner.js';
+import {
+  runBpmn,
+  createDefinition,
+  runDefinition,
+  stepDefinition,
+  stopDefinition,
+  switchStepMode,
+  listDmnDecisions,
+} from '../src/runner/bpmn-runner.js';
 
 const SIMPLE_SOURCE = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_1" targetNamespace="http://bpmn.io/schema/bpmn">
@@ -468,11 +476,7 @@ test('step mode completes a loop inside a sub-process', async () => {
 
   const { events } = await done;
   assert.equal(finished, true, 'stepping should complete an inner loop');
-  assert.equal(
-    events.filter((e) => e.event === 'activity.enter' && e.id === 'inner-task').length,
-    2,
-    'inner task should have looped once',
-  );
+  assert.equal(events.filter((e) => e.event === 'activity.enter' && e.id === 'inner-task').length, 2, 'inner task should have looped once');
   assert.equal(events.at(-1).event, 'definition.leave');
 });
 
@@ -615,7 +619,10 @@ test('switchStepMode takes a stepped run through to the end', async () => {
   const { stopped, events } = await runDefinition(next, { resume: true });
   assert.equal(stopped, undefined, 'the recovered run should complete by itself');
   assert.equal(events.at(-1).event, 'definition.leave');
-  assert.ok(events.some((e) => e.event === 'activity.end' && e.id === 'end'), 'should reach the end event');
+  assert.ok(
+    events.some((e) => e.event === 'activity.end' && e.id === 'end'),
+    'should reach the end event',
+  );
 });
 
 test('switchStepMode resumes a stepped run from wherever it was parked', async () => {
@@ -1206,7 +1213,10 @@ test('stopping a running definition settles the run as stopped', async () => {
 
   const result = await done;
   assert.equal(result.stopped, true);
-  assert.ok(result.events.some((e) => e.event === 'activity.wait'), 'events up to the stop are kept');
+  assert.ok(
+    result.events.some((e) => e.event === 'activity.wait'),
+    'events up to the stop are kept',
+  );
 });
 
 test('rejects on unparsable input', async () => {

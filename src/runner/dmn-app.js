@@ -5,9 +5,9 @@ import { makeTakeHelper } from './take-helper.js';
 // FEEL service functions must be synchronous — dmn-elements fails a
 // promise-returning service loudly. Async data is integrated by loading it
 // beside the run and exposing a sync accessor over the loaded cache.
-async function loadExchangeRates() {
+function loadExchangeRates() {
   // stands in for an async backend call — a static page cannot fetch cross-origin
-  return { EUR: 1, USD: 1.25, GBP: 0.75, SEK: 11.5 };
+  return Promise.resolve({ EUR: 1, USD: 1.25, GBP: 0.75, SEK: 11.5 });
 }
 const exchangeRates = {};
 const ratesLoaded = loadExchangeRates().then((rates) => Object.assign(exchangeRates, rates));
@@ -199,9 +199,7 @@ function makeInputField(typeRef) {
 const formFieldTypes = new Map();
 
 function updateRequiredInputs() {
-  const requiredInputs = runner && decisionSelect.value
-    ? listRequiredInputs(runner.rootElement, decisionSelect.value)
-    : [];
+  const requiredInputs = runner && decisionSelect.value ? listRequiredInputs(runner.rootElement, decisionSelect.value) : [];
 
   // keep values the user already typed when re-rendering (decision switch)
   const previous = new Map(new FormData(inputFormEl));
@@ -285,7 +283,10 @@ function renderImports() {
     li.append(name, ' ', namespace, label);
     importsEl.append(li);
     if (!model) {
-      logLine(`import <${importDef.name || importDef.namespace}> is not loaded — drop ${importDef.locationURI || 'its .dmn file'} on this panel (${importDef.namespace})`, { className: 'warn' });
+      logLine(
+        `import <${importDef.name || importDef.namespace}> is not loaded — drop ${importDef.locationURI || 'its .dmn file'} on this panel (${importDef.namespace})`,
+        { className: 'warn' },
+      );
       logDetails.open = true;
     }
   }
@@ -358,9 +359,7 @@ function renderTrace(trace) {
   traceBody.textContent = '';
   for (const entry of trace) {
     const tr = document.createElement('tr');
-    const logic = [entry.decisionLogic || entry.type.replace(/^dmn:/, ''), entry.hitPolicy, entry.aggregation]
-      .filter(Boolean)
-      .join(' · ');
+    const logic = [entry.decisionLogic || entry.type.replace(/^dmn:/, ''), entry.hitPolicy, entry.aggregation].filter(Boolean).join(' · ');
     const cells = [
       entry.name ? `${entry.name} (${entry.id})` : entry.id,
       logic.replace(/^dmn:/, ''),
@@ -404,7 +403,7 @@ async function evaluate() {
       try {
         input = JSON.parse(inputJson);
       } catch (err) {
-        throw new Error(`input data is not valid JSON — ${err.message}`);
+        throw new Error(`input data is not valid JSON — ${err.message}`, { cause: err });
       }
       if (!input || typeof input !== 'object' || Array.isArray(input)) {
         throw new Error('input data must be a JSON object');

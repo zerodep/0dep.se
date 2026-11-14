@@ -131,9 +131,11 @@ export function listRequiredInputs(rootElement, drgElementId) {
  */
 export function forwardingLogger(onLog) {
   return function Logger(scope) {
-    const forward = (level) => (...args) => {
-      onLog({ scope, level, message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') });
-    };
+    const forward =
+      (level) =>
+      (...args) => {
+        onLog({ scope, level, message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') });
+      };
     return { debug: forward('debug'), warn: forward('warn'), error: forward('error') };
   };
 }

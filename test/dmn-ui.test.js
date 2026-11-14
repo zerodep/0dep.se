@@ -49,7 +49,7 @@ before(async () => {
   // the example loader fetches /dmn/*.dmn — serve them from dist
   globalThis.fetch = async (url) => {
     const content = await readFile(join(repoRoot, 'dist', 'dmn', basename(String(url))), 'utf8');
-    return { ok: true, text: async () => content };
+    return { ok: true, text: () => content };
   };
   await import('../src/runner/dmn-app.js');
 });
@@ -267,19 +267,22 @@ test('a well-formed decision table renders no warning', async () => {
   setSource(discountSource);
   // the previous test's warning disappearing marks the fresh render
   await waitFor(() => !document.querySelector('#tables .table-warning'));
-  assert.ok(document.querySelector('#tables figure[data-decision-id="discount"] th.output'), 'complete table should render its output header');
+  assert.ok(
+    document.querySelector('#tables figure[data-decision-id="discount"] th.output'),
+    'complete table should render its output header',
+  );
 });
 
 /** Dispatch a drop of pseudo-files — `{ name, text() }` is all the app reads. */
 function drop(files) {
   const event = new window.Event('drop', { cancelable: true });
   Object.defineProperty(event, 'dataTransfer', {
-    value: { files: files.map(([name, content]) => ({ name, text: async () => content })) },
+    value: { files: files.map(([name, content]) => ({ name, text: () => content })) },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(event);
 }
 
-async function fixture(name) {
+function fixture(name) {
   return readFile(join(repoRoot, 'test', 'resources', name), 'utf8');
 }
 
@@ -303,8 +306,9 @@ test('dropping a model and the model it imports at once loads the importing one 
   click(document.querySelector('#evaluate'));
   await waitFor(() => document.querySelector('#result').textContent === '150');
   assert.ok(
-    document.querySelector('#trace-body tr[data-element-id="shippingFee"]') || /shippingFee/.test(document.querySelector('#trace-body').textContent),
-    'the imported decision lands in the trace'
+    document.querySelector('#trace-body tr[data-element-id="shippingFee"]') ||
+      /shippingFee/.test(document.querySelector('#trace-body').textContent),
+    'the imported decision lands in the trace',
   );
 });
 

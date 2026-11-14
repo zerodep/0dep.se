@@ -25,16 +25,22 @@ function loadWorker(source, { network, cached = {} } = {}) {
     return stores.get(name);
   };
   const keyOf = (req) => new URL(typeof req === 'string' ? req : req.url, origin).pathname;
+  const fetched = [];
+  const fetchFromNetwork = (req) => {
+    const request = typeof req === 'string' ? new Request(new URL(req, origin)) : req;
+    fetched.push(request);
+    return Promise.resolve(network(request));
+  };
   const cacheFor = (name) => {
     const store = openStore(name);
     return {
       async addAll(reqs) {
-        for (const req of reqs) store.set(keyOf(req), await sandbox.fetch(req));
+        for (const req of reqs) store.set(keyOf(req), await fetchFromNetwork(req));
       },
-      async put(req, res) {
+      put(req, res) {
         store.set(keyOf(req), res);
       },
-      async match(req) {
+      match(req) {
         return store.get(keyOf(req));
       },
     };
@@ -43,7 +49,6 @@ function loadWorker(source, { network, cached = {} } = {}) {
     for (const [path, body] of Object.entries(entries)) openStore(name).set(path, new Response(body));
   }
   const listeners = {};
-  const fetched = [];
   const sandbox = {
     URL,
     Request: class extends Request {
@@ -52,20 +57,14 @@ function loadWorker(source, { network, cached = {} } = {}) {
       }
     },
     Response,
-    fetch: async (req) => {
-      const request = typeof req === 'string' ? new Request(new URL(req, origin)) : req;
-      fetched.push(request);
-      return network(request);
-    },
+    fetch: fetchFromNetwork,
     caches: {
-      open: async (name) => cacheFor(name),
-      keys: async () => [...stores.keys()],
-      delete: async (name) => stores.delete(name),
-      match: async (req) => {
-        for (const name of stores.keys()) {
-          const hit = await cacheFor(name).match(req);
-          if (hit) return hit;
-        }
+      open: (name) => Promise.resolve(cacheFor(name)),
+      keys: () => Promise.resolve([...stores.keys()]),
+      delete: (name) => stores.delete(name),
+      match: (req) => {
+        const hits = [...stores.keys()].map((name) => cacheFor(name).match(req));
+        return Promise.resolve(hits.find(Boolean));
       },
     },
     self: {

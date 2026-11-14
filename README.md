@@ -41,7 +41,7 @@ npm run toc     # regenerate this file's table of contents (also runs in pretest
 ## Deployment
 
 Hosted on **GitHub Pages**, deployed by `.github/workflows/pages.yml`
-(Pages source is set to *GitHub Actions* in the repo settings — nothing
+(Pages source is set to _GitHub Actions_ in the repo settings — nothing
 is served from a branch). Every push to `main` (or a manual
 `workflow_dispatch`) runs:
 

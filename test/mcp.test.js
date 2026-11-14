@@ -123,11 +123,13 @@ test('run_bpmn executes a diagram and returns the output', async () => {
 test('run_bpmn evaluates dropped DMN via business rule tasks', async () => {
   const bpmn = await readFile(join(resources, 'pricing.bpmn'), 'utf8');
   const dmn = await readFile(join(resources, 'discount.dmn'), 'utf8');
-  const payload = toolJson(await callTool('run_bpmn', {
-    source: bpmn,
-    dmn: [dmn],
-    variables: { order: { total: 250 } },
-  }));
+  const payload = toolJson(
+    await callTool('run_bpmn', {
+      source: bpmn,
+      dmn: [dmn],
+      variables: { order: { total: 250 } },
+    }),
+  );
   assert.deepEqual(payload.output, { rebate: 0.1 });
 });
 

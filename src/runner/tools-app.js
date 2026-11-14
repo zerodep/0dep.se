@@ -140,7 +140,13 @@ function runIso(input, options) {
         case 'duration':
           row(dl, 'Normalized', code(result.normalized));
           row(dl, 'Sign', result.sign < 0 ? 'negative (−)' : 'positive');
-          row(dl, 'Designators', Object.entries(result.designators).map(([k, v]) => `${k}=${v}`).join(', '));
+          row(
+            dl,
+            'Designators',
+            Object.entries(result.designators)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(', '),
+          );
           row(dl, 'Milliseconds (from now)', result.milliseconds);
           row(dl, 'Expires (from now)', when(result.expireAt));
           break;
@@ -252,7 +258,8 @@ function restore(entry) {
     isoInput.value = entry.input;
     isoKind.value = entry.options.kind ?? 'auto';
     isoUtc.checked = Boolean(entry.options.enforceUTC);
-    isoForm.requestSubmit ? isoForm.requestSubmit() : isoForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    if (isoForm.requestSubmit) isoForm.requestSubmit();
+    else isoForm.dispatchEvent(new Event('submit', { cancelable: true }));
     isoForm.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   } else if (entry.tool === 'ocr') {
     ocrInput.value = entry.input;
@@ -263,7 +270,8 @@ function restore(entry) {
     ocrFixed2.value = entry.options.fixedLength2 ?? '';
     ocrMin.value = entry.options.minLength ?? '';
     ocrMax.value = entry.options.maxLength ?? '';
-    ocrForm.requestSubmit ? ocrForm.requestSubmit() : ocrForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    if (ocrForm.requestSubmit) ocrForm.requestSubmit();
+    else ocrForm.dispatchEvent(new Event('submit', { cancelable: true }));
     ocrForm.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
 }

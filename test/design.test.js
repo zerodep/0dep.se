@@ -69,15 +69,25 @@ test('runtimeDeps match the published dependencies of packages installed locally
 
 test('packages with required peers are not sold as zero-dependency', () => {
   const withPeers = allProjects().filter((p) => p.runtimeDeps.length === 0 && p.peerDeps.length > 0);
-  assert.ok(withPeers.some((p) => p.slug === 'dmn-elements'), 'dmn-elements peers on feelin');
-  assert.ok(withPeers.some((p) => p.slug === 'moddle-context-serializer'), 'moddle-context-serializer peers on bpmn-moddle');
+  assert.ok(
+    withPeers.some((p) => p.slug === 'dmn-elements'),
+    'dmn-elements peers on feelin',
+  );
+  assert.ok(
+    withPeers.some((p) => p.slug === 'moddle-context-serializer'),
+    'moddle-context-serializer peers on bpmn-moddle',
+  );
   const engine = allProjects().find((p) => p.slug === 'bpmn-engine');
   assert.deepEqual(engine.runtimeDeps, [], 'bpmn-engine ships no dependencies of its own');
   assert.ok(engine.peerDeps.includes('smqp') && engine.peerDeps.includes('bpmn-elements'), 'bpmn-engine peers on the ecosystem');
 });
 
 test('the zerodep group only builds on packages listed on this page', () => {
-  const listed = new Set(allProjects().filter((p) => p.npm).map((p) => p.npm));
+  const listed = new Set(
+    allProjects()
+      .filter((p) => p.npm)
+      .map((p) => p.npm),
+  );
   const group = manifest.groups.find((g) => g.id === 'zerodep');
   for (const p of group.projects) {
     for (const dep of p.runtimeDeps) assert.ok(listed.has(dep), `${p.slug}: dependency ${dep} is not an in-house package on this page`);
@@ -184,7 +194,11 @@ test('the avatar ships as a small colour cut-out on the card ground', async () =
 
 test('the avatar offers webp variants sized to the device pixel ratio', async () => {
   const profile = JSON.parse(await readFile(join(repoRoot, 'data', 'profile.json'), 'utf8'));
-  assert.deepEqual(profile.avatarWebp.map((v) => v.density), [1, 2, 3], 'cover 1x, 2x and 3x screens');
+  assert.deepEqual(
+    profile.avatarWebp.map((v) => v.density),
+    [1, 2, 3],
+    'cover 1x, 2x and 3x screens',
+  );
   let total = 0;
   for (const { src, density } of profile.avatarWebp) {
     const webp = await readFile(join(distDir, src.replace(/^\//, '')));
@@ -273,7 +287,11 @@ test('runner pages tag the exact version of every lib they run', async () => {
       const { version } = JSON.parse(await readFile(join(repoRoot, 'node_modules', lib, 'package.json'), 'utf8'));
       const tag = tags[i];
       assert.equal(tag.querySelector('.version').textContent, `v${version}`, `${page}: ${lib} tag should show the installed version`);
-      assert.equal(tag.getAttribute('href'), `https://www.npmjs.com/package/${lib}/v/${version}`, `${page}: ${lib} tag links the exact release on npm`);
+      assert.equal(
+        tag.getAttribute('href'),
+        `https://www.npmjs.com/package/${lib}/v/${version}`,
+        `${page}: ${lib} tag links the exact release on npm`,
+      );
     }
   }
 });

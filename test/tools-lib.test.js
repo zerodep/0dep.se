@@ -23,7 +23,7 @@ describe('evaluateIso', () => {
     assert.equal(r.expireAt, '1971-03-04T04:00:00.000Z');
     assert.equal(r.sign, 1);
     assert.equal(r.startAt, undefined, 'a duration has no absolute start without a reference');
-      });
+  });
 
   test('derives the start of a duration/end interval from its end, counting repetitions', () => {
     const r = evaluateIso('R5/P1Y/2025-05-01T13:00:00Z');
@@ -176,8 +176,12 @@ describe('createHistory', () => {
     const data = { ...initial };
     return {
       getItem: (k) => (k in data ? data[k] : null),
-      setItem: (k, v) => { data[k] = String(v); },
-      removeItem: (k) => { delete data[k]; },
+      setItem: (k, v) => {
+        data[k] = String(v);
+      },
+      removeItem: (k) => {
+        delete data[k];
+      },
       data,
     };
   }
@@ -204,10 +208,16 @@ describe('createHistory', () => {
     history.push({ tool: 'iso', input: 'P1D', options: {} });
     history.push({ tool: 'iso', input: 'P2D', options: {} });
     history.push({ tool: 'iso', input: 'P1D', options: {} });
-    assert.deepEqual(history.list().map((e) => e.input), ['P1D', 'P2D']);
+    assert.deepEqual(
+      history.list().map((e) => e.input),
+      ['P1D', 'P2D'],
+    );
     history.push({ tool: 'iso', input: 'P3D', options: {} });
     history.push({ tool: 'iso', input: 'P4D', options: {} });
-    assert.deepEqual(history.list().map((e) => e.input), ['P4D', 'P3D', 'P1D']);
+    assert.deepEqual(
+      history.list().map((e) => e.input),
+      ['P4D', 'P3D', 'P1D'],
+    );
   });
 
   test('different options are different attempts', () => {
@@ -223,7 +233,10 @@ describe('createHistory', () => {
     history.push({ tool: 'iso', input: 'P1D', options: {} });
     history.push({ tool: 'iso', input: 'P2D', options: {} });
     history.remove(history.list()[0].id);
-    assert.deepEqual(history.list().map((e) => e.input), ['P1D']);
+    assert.deepEqual(
+      history.list().map((e) => e.input),
+      ['P1D'],
+    );
     history.clear();
     assert.deepEqual(history.list(), []);
     assert.equal(storage.getItem('k'), null, 'clear removes the key');
@@ -232,11 +245,20 @@ describe('createHistory', () => {
   test('survives corrupt or unavailable storage', () => {
     const corrupt = createHistory(memoryStorage({ k: '{not json' }), { key: 'k', max: 10 });
     assert.deepEqual(corrupt.list(), []);
-    const throwing = createHistory({
-      getItem() { throw new Error('denied'); },
-      setItem() { throw new Error('denied'); },
-      removeItem() { throw new Error('denied'); },
-    }, { key: 'k', max: 10 });
+    const throwing = createHistory(
+      {
+        getItem() {
+          throw new Error('denied');
+        },
+        setItem() {
+          throw new Error('denied');
+        },
+        removeItem() {
+          throw new Error('denied');
+        },
+      },
+      { key: 'k', max: 10 },
+    );
     assert.deepEqual(throwing.list(), []);
     throwing.push({ tool: 'iso', input: 'P1D', options: {} });
     assert.equal(throwing.list().length, 1, 'in-memory list still works');

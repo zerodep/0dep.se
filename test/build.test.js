@@ -51,11 +51,7 @@ test('writes about/index.html', async () => {
 test('writes 404.html with noindex and back-to-home link', async () => {
   const raw = await readFile(join(distDir, '404.html'), 'utf8');
   const doc = parseHtml(raw);
-  assert.equal(
-    doc.querySelector('meta[name="robots"]')?.getAttribute('content'),
-    'noindex',
-    '404 page should be noindex',
-  );
+  assert.equal(doc.querySelector('meta[name="robots"]')?.getAttribute('content'), 'noindex', '404 page should be noindex');
   assert.ok(doc.querySelector('a[href="/"]'), 'should link back to home');
   assert.match(doc.querySelector('h1')?.textContent ?? '', /404/);
 });
@@ -122,20 +118,14 @@ test('home: open graph tags', () => {
     assert.ok(el, `og tag missing: ${prop}`);
     assert.ok(el.getAttribute('content'), `og tag empty: ${prop}`);
   }
-  assert.equal(
-    homeDoc.querySelector('meta[property="og:type"]').getAttribute('content'),
-    'website',
-  );
+  assert.equal(homeDoc.querySelector('meta[property="og:type"]').getAttribute('content'), 'website');
 });
 
 test('home: twitter card uses summary_large_image', () => {
-  assert.equal(
-    homeDoc.querySelector('meta[name="twitter:card"]')?.getAttribute('content'),
-    'summary_large_image',
-  );
+  assert.equal(homeDoc.querySelector('meta[name="twitter:card"]')?.getAttribute('content'), 'summary_large_image');
 });
 
-test('home: JSON-LD includes WebSite, Organization and ItemList', async () => {
+test('home: JSON-LD includes WebSite, Organization and ItemList', () => {
   const scripts = [...homeDoc.querySelectorAll('script[type="application/ld+json"]')];
   assert.ok(scripts.length >= 1, 'no JSON-LD scripts');
   const types = new Set();
@@ -153,14 +143,8 @@ test('home: JSON-LD includes WebSite, Organization and ItemList', async () => {
 });
 
 test('home: header tagline and intro', () => {
-  assert.equal(
-    homeDoc.querySelector('.site-header .tagline').textContent,
-    manifest.site.tagline,
-  );
-  assert.equal(
-    homeDoc.querySelector('.site-header .intro').textContent,
-    manifest.site.intro,
-  );
+  assert.equal(homeDoc.querySelector('.site-header .tagline').textContent, manifest.site.tagline);
+  assert.equal(homeDoc.querySelector('.site-header .intro').textContent, manifest.site.intro);
 });
 
 test('home: logo image in header', () => {
@@ -199,15 +183,10 @@ test('home: every group renders with title, description, and projects', () => {
       const tags = [...article.querySelectorAll('.tags li')].map((li) => li.textContent);
       assert.deepEqual(tags, p.tags);
 
-      const linkHrefs = [...article.querySelectorAll('p.links a')].map((a) =>
-        a.getAttribute('href'),
-      );
+      const linkHrefs = [...article.querySelectorAll('p.links a')].map((a) => a.getAttribute('href'));
       assert.ok(linkHrefs.includes(p.repo), `${p.slug}: repo link missing in links row`);
       if (p.npm) {
-        assert.ok(
-          linkHrefs.includes(`https://www.npmjs.com/package/${p.npm}`),
-          `${p.slug}: npm link missing`,
-        );
+        assert.ok(linkHrefs.includes(`https://www.npmjs.com/package/${p.npm}`), `${p.slug}: npm link missing`);
       }
     }
   }
@@ -240,14 +219,16 @@ test('every page footer shows the site version', async () => {
   const { version } = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
   for (const page of ['index.html', 'about/index.html', 'run/index.html', 'dmn/index.html', 'tools/index.html', 'toc/index.html']) {
     const doc = parseHtml(await readFile(join(distDir, page), 'utf8'));
-    assert.match(doc.querySelector('footer .version')?.textContent ?? '', new RegExp(`v${version.replaceAll('.', '\\.')}`), `${page} footer should show v${version}`);
+    assert.match(
+      doc.querySelector('footer .version')?.textContent ?? '',
+      new RegExp(`v${version.replaceAll('.', '\\.')}`),
+      `${page} footer should show v${version}`,
+    );
   }
 });
 
 test('home: only JSON-LD script tags (no executable JS)', () => {
-  const nonLd = [...homeDoc.querySelectorAll('script')].filter(
-    (s) => s.getAttribute('type') !== 'application/ld+json',
-  );
+  const nonLd = [...homeDoc.querySelectorAll('script')].filter((s) => s.getAttribute('type') !== 'application/ld+json');
   assert.equal(nonLd.length, 0, 'unexpected executable <script> tag');
 });
 
@@ -288,9 +269,7 @@ test('about: avatar is a <picture> offering device-sized webp with the png as fa
 });
 
 test('about: bio paragraphs match manifest order and content', () => {
-  const paragraphs = [...aboutDoc.querySelectorAll('main.profile .bio p')].map(
-    (p) => p.textContent,
-  );
+  const paragraphs = [...aboutDoc.querySelectorAll('main.profile .bio p')].map((p) => p.textContent);
   assert.deepEqual(paragraphs, profile.bio);
 });
 
@@ -321,14 +300,8 @@ test('about: back link points to /', () => {
 });
 
 test('about: shared assets use absolute paths', () => {
-  assert.equal(
-    aboutDoc.querySelector('link[rel="stylesheet"]')?.getAttribute('href'),
-    '/styles.css',
-  );
-  assert.equal(
-    aboutDoc.querySelector('link[rel="icon"][sizes="32x32"]')?.getAttribute('href'),
-    '/favicon-32.png',
-  );
+  assert.equal(aboutDoc.querySelector('link[rel="stylesheet"]')?.getAttribute('href'), '/styles.css');
+  assert.equal(aboutDoc.querySelector('link[rel="icon"][sizes="32x32"]')?.getAttribute('href'), '/favicon-32.png');
 });
 
 test('about: canonical link is /about/', () => {
@@ -337,10 +310,7 @@ test('about: canonical link is /about/', () => {
 });
 
 test('about: og:type is profile', () => {
-  assert.equal(
-    aboutDoc.querySelector('meta[property="og:type"]')?.getAttribute('content'),
-    'profile',
-  );
+  assert.equal(aboutDoc.querySelector('meta[property="og:type"]')?.getAttribute('content'), 'profile');
 });
 
 test('about: JSON-LD has Person with image', () => {
@@ -391,17 +361,11 @@ test('static/ files are copied verbatim to dist', async () => {
 test('browser favicons have tRNS chunk (white keyed transparent)', async () => {
   for (const f of ['favicon-32.png', 'favicon-192.png']) {
     const buf = await readFile(join(distDir, f));
-    assert.ok(
-      buf.includes(Buffer.from('tRNS', 'ascii')),
-      `${f} should contain a tRNS chunk to make white transparent`,
-    );
+    assert.ok(buf.includes(Buffer.from('tRNS', 'ascii')), `${f} should contain a tRNS chunk to make white transparent`);
   }
 });
 
 test('apple-touch-icon keeps white background (no tRNS)', async () => {
   const buf = await readFile(join(distDir, 'apple-touch-icon.png'));
-  assert.ok(
-    !buf.includes(Buffer.from('tRNS', 'ascii')),
-    'apple-touch-icon should not have tRNS — white bg is conventional on iOS',
-  );
+  assert.ok(!buf.includes(Buffer.from('tRNS', 'ascii')), 'apple-touch-icon should not have tRNS — white bg is conventional on iOS');
 });

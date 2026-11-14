@@ -134,7 +134,10 @@ test('home nav, sitemap and llms.txt list /tools/', async () => {
   const homeDoc = parseHtml(await readFile(join(distDir, 'index.html'), 'utf8'));
   assert.ok(homeDoc.querySelector('nav a[href="/tools/"]'), 'tools link in nav not found');
   const sitemap = await readFile(join(distDir, 'sitemap.xml'), 'utf8');
-  assert.ok(sitemap.split('<url>').some((u) => u.includes('/tools/</loc>')), 'sitemap should list /tools/');
+  assert.ok(
+    sitemap.split('<url>').some((u) => u.includes('/tools/</loc>')),
+    'sitemap should list /tools/',
+  );
   const llms = await readFile(join(distDir, 'llms.txt'), 'utf8');
   assert.match(llms, /\/tools\/\)/);
 });

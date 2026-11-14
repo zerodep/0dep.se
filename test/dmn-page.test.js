@@ -69,8 +69,14 @@ test('dmn page has a trace table in its own hidden collapsible', () => {
   assert.ok(table, 'trace table not found');
   assert.ok(table.querySelector('tbody#trace-body'), 'trace tbody missing');
   const headers = [...table.querySelectorAll('th')].map((th) => th.textContent.toLowerCase());
-  assert.ok(headers.some((h) => h.includes('rules')), 'trace should have a matched-rules column');
-  assert.ok(headers.some((h) => h.includes('result')), 'trace should have a result column');
+  assert.ok(
+    headers.some((h) => h.includes('rules')),
+    'trace should have a matched-rules column',
+  );
+  assert.ok(
+    headers.some((h) => h.includes('result')),
+    'trace should have a result column',
+  );
 });
 
 test('dmn page has a collapsed evaluation log', () => {
@@ -115,7 +121,15 @@ test('dmn page title and description target online-evaluator searches', () => {
   assert.match(desc.toLowerCase(), /browser/);
   assert.match(desc.toLowerCase(), /decision/);
   const keywords = dmnDoc.querySelector('meta[name="keywords"]')?.getAttribute('content') ?? '';
-  for (const phrase of ['dmn decision table online', 'evaluate dmn online', 'online dmn runner', 'dmn evaluator', 'camunda dmn', 'decision requirements graph', 'feel expression']) {
+  for (const phrase of [
+    'dmn decision table online',
+    'evaluate dmn online',
+    'online dmn runner',
+    'dmn evaluator',
+    'camunda dmn',
+    'decision requirements graph',
+    'feel expression',
+  ]) {
     assert.ok(keywords.toLowerCase().includes(phrase), `keywords should include ${phrase}`);
   }
 });
@@ -158,23 +172,14 @@ test('dmn page has crawlable about content matching the FAQ', () => {
     .flatMap((d) => (Array.isArray(d) ? d : [d]))
     .find((d) => d['@type'] === 'FAQPage');
   for (const q of faqLd.mainEntity) {
-    assert.ok(
-      about.textContent.includes(q.name),
-      `FAQ question should be visible on the page: ${q.name}`,
-    );
+    assert.ok(about.textContent.includes(q.name), `FAQ question should be visible on the page: ${q.name}`);
   }
 });
 
 test('dmn page works offline — service worker precaches the runner', async () => {
   const sw = await readFile(join(distDir, 'dmn', 'sw.js'), 'utf8');
   assert.match(sw, /dmn-[0-9a-f]+/, 'cache name should carry a build version');
-  for (const asset of [
-    '/dmn/',
-    '/dmn/index.html',
-    '/dmn/app.js',
-    '/dmn/discount.dmn',
-    '/styles.css',
-  ]) {
+  for (const asset of ['/dmn/', '/dmn/index.html', '/dmn/app.js', '/dmn/discount.dmn', '/styles.css']) {
     assert.ok(sw.includes(`"${asset}"`), `service worker should precache ${asset}`);
   }
 
