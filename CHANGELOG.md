@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.14.0 - 2026-11-14
+
+- `/run/`, `/dmn/`, `/toc/`: a dropped file has to be UTF-8 text of at most 5 MB, and on `/run/` and `/dmn/` it has to be XML — a binary file, text in another encoding or an oversized file is rejected with a message naming the file instead of landing in the source as garbage. A rejected drop leaves the source and results as they are, and on `/run/` no longer stops a run in progress
+- `/run/`, `/dmn/`: what the XML parser could not make sense of — an unknown element or attribute, an unresolved reference, a declared encoding other than UTF-8 — is logged as a warning instead of being dropped silently, and a source that fails to parse also says what was found instead. On `/run/` a warning about a decisions file starts with its position in the list (`DMN source 2: …`), on `/dmn/` a warning about a dropped import starts with its file name
+- `/run/`: a warning opens the log, and warnings are no longer repeated when step mode is switched mid-run
+- upgrade [`moddle-context-serializer@7`](https://github.com/paed01/moddle-context-serializer/blob/main/CHANGELOG.md)
+- lint with ESLint and Prettier, set up as in the other zerodep packages and run by `npm test`; the source is reformatted, which shows in the unminified `styles.css`
+
 ## v1.13.1 - 2026-10-27
 
 - upgrade `croner@11`

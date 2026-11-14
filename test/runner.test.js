@@ -1204,6 +1204,58 @@ test('no warning for FEEL or template condition bodies', async () => {
   assert.deepEqual(warnings, []);
 });
 
+test('reports what the parser could not make sense of as warnings, and still runs', async () => {
+  const source = SIMPLE_SOURCE.replace('encoding="UTF-8"', 'encoding="UTF-16"')
+    .replace('isExecutable="true"', 'isExecutable="true" flavour="mint"')
+    .replace('<endEvent ', '<wizard id="merlin" />\n    <endEvent ');
+  const warnings = [];
+  const { events } = await runBpmn(source, { onWarning: (message) => warnings.push(message) });
+
+  assert.equal(events.at(-1).event, 'definition.leave');
+  assert.equal(warnings.length, 3, `expected three warnings, got: ${warnings.join(' | ')}`);
+  assert.match(warnings[0], /unsupported document encoding <UTF-16>/);
+  assert.match(warnings[1], /unknown attribute <flavour>/);
+  assert.match(warnings[2], /unparsable content <wizard>[^]*unknown type <bpmn:Wizard>/);
+});
+
+test('a source that is not BPMN reports what was found before the rejection', async () => {
+  const warnings = [];
+  await assert.rejects(
+    createDefinition(DMN_SOURCE, { onWarning: (message) => warnings.push(message) }),
+    /failed to parse document as <bpmn:Definitions>/,
+  );
+  assert.equal(warnings.length, 1, `expected one warning, got: ${warnings.join(' | ')}`);
+  assert.match(warnings[0], /unexpected element <definitions>/);
+});
+
+test('warnings of a DMN source tell which of the sources they are about', async () => {
+  const odd = DMN_SOURCE.replace('<decision ', '<wizard id="merlin" />\n  <decision ');
+  const warnings = [];
+  const { output } = await runBpmn(BUSINESS_RULE_SOURCE, {
+    dmn: [DMN_SOURCE, odd],
+    variables: { total: 250 },
+    onWarning: (message) => warnings.push(message),
+  });
+
+  assert.deepEqual(output, { rebate: 0.1 });
+  assert.equal(warnings.length, 1, `expected one warning, got: ${warnings.join(' | ')}`);
+  assert.match(warnings[0], /^DMN source 2: unparsable content <wizard>[^]*unknown type <dmn:Wizard>/);
+});
+
+test('switching step mode does not report the warnings of the source again', async () => {
+  const source = SIMPLE_SOURCE.replace('<endEvent ', '<wizard id="merlin" />\n    <endEvent ');
+  const warnings = [];
+  const options = { step: true, onWarning: (message) => warnings.push(message) };
+  const definition = await createDefinition(source, options);
+  runDefinition(definition).catch(() => {});
+  stepDefinition(definition);
+
+  const next = await switchStepMode(definition, source, false, options);
+  await runDefinition(next, { resume: true });
+
+  assert.equal(warnings.length, 1, `expected the warning once, got: ${warnings.join(' | ')}`);
+});
+
 test('stopping a running definition settles the run as stopped', async () => {
   const definition = await createDefinition(USER_TASK_SOURCE);
   const done = runDefinition(definition);

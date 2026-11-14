@@ -1,9 +1,16 @@
 import { DmnModdle } from 'dmn-moddle';
 import { Context, Definition, Environment } from 'dmn-elements';
+import { parseXml } from './moddle-parse.js';
 
-/** Parse DMN XML and return the moddle root element. */
-export async function parseDmn(source) {
-  const { rootElement } = await new DmnModdle().fromXML(String(source));
+/**
+ * Parse DMN XML and return the moddle root element.
+ * @param {string} source DMN XML
+ * @param {object} [options]
+ * @param {(message: string) => void} [options.onWarning] receives what the parser could not make sense of,
+ *   also for a source that is rejected
+ */
+export async function parseDmn(source, { onWarning } = {}) {
+  const { rootElement } = await parseXml(new DmnModdle(), source, onWarning);
   return rootElement;
 }
 
@@ -31,7 +38,7 @@ export function listImports(rootElement) {
  * whose namespace has not been added fails the evaluation with a clear
  * "did not resolve" error from dmn-elements.
  * @returns {{
- *   add: (source: string, label?: string) => Promise<{ namespace: string, name?: string, label?: string, source: string, rootElement: object, imports: object[], decisions: object[] }>,
+ *   add: (source: string, label?: string) => Promise<{ namespace: string, name?: string, label?: string, source: string, rootElement: object, imports: object[], decisions: object[], warnings: string[] }>,
  *   has: (namespace: string) => boolean,
  *   list: () => { namespace: string, name?: string, label?: string }[],
  *   resolveImport: (importDef: { namespace: string }) => object | undefined,
@@ -40,9 +47,13 @@ export function listImports(rootElement) {
 export function createImportLibrary() {
   const models = new Map();
   return {
-    /** Parse DMN XML and file it under its namespace, replacing an earlier model of the same namespace. */
+    /**
+     * Parse DMN XML and file it under its namespace, replacing an earlier model of the same namespace.
+     * The model carries what the parser could not make sense of as `warnings`.
+     */
     async add(source, label) {
-      const rootElement = await parseDmn(source);
+      const warnings = [];
+      const rootElement = await parseDmn(source, { onWarning: (message) => warnings.push(message) });
       const model = {
         namespace: rootElement.namespace,
         name: rootElement.name,
@@ -51,6 +62,7 @@ export function createImportLibrary() {
         rootElement,
         imports: listImports(rootElement),
         decisions: listDecisions(rootElement),
+        warnings,
       };
       models.set(model.namespace, model);
       return model;
@@ -145,6 +157,8 @@ export function forwardingLogger(onLog) {
  * @param {string} source DMN XML
  * @param {object} [options]
  * @param {(entry: {scope: string, level: string, message: string}) => void} [options.onLog] receives evaluation log lines
+ * @param {(message: string) => void} [options.onWarning] receives what the parser could not make sense of in the source,
+ *   also for a source that is rejected
  * @param {Record<string, Function>} [options.services] services exposed to FEEL as `services.<name>`
  * @param {(importDef: { name?: string, namespace: string, locationURI?: string }) => object | undefined} [options.resolveImport]
  *   resolves a declared import to its parsed definitions, e.g. an import library's `resolveImport`;
@@ -153,8 +167,8 @@ export function forwardingLogger(onLog) {
  *   the definition, the parsed moddle root (for rendering), its decisions, and its declared imports
  */
 export async function createDmnRunner(source, options = {}) {
-  const { onLog, services, resolveImport } = options;
-  const rootElement = await parseDmn(source);
+  const { onLog, onWarning, services, resolveImport } = options;
+  const rootElement = await parseDmn(source, { onWarning });
   const environment = new Environment({
     Logger: onLog && forwardingLogger(onLog),
     services,

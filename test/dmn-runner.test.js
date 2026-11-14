@@ -29,6 +29,34 @@ test('createDmnRunner rejects on non-DMN input', async () => {
   await assert.rejects(createDmnRunner('not dmn at all'));
 });
 
+test('createDmnRunner reports what the parser could not make sense of as warnings, and still loads', async () => {
+  const source = SERVICE_DMN_SOURCE.replace('encoding="UTF-8"', 'encoding="UTF-16"').replace(
+    '<decision ',
+    '<wizard id="merlin" />\n  <decision ',
+  );
+  const warnings = [];
+  const { decisions } = await createDmnRunner(source, { onWarning: (message) => warnings.push(message) });
+
+  assert.deepEqual(
+    decisions.map((d) => d.id),
+    ['fee'],
+  );
+  assert.equal(warnings.length, 2, `expected two warnings, got: ${warnings.join(' | ')}`);
+  assert.match(warnings[0], /unsupported document encoding <UTF-16>/);
+  assert.match(warnings[1], /unparsable content <wizard>[^]*unknown type <dmn:Wizard>/);
+});
+
+test('a source that is not DMN reports what was found before createDmnRunner rejects', async () => {
+  const bpmn = '<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_bpmn" />';
+  const warnings = [];
+  await assert.rejects(
+    createDmnRunner(bpmn, { onWarning: (message) => warnings.push(message) }),
+    /failed to parse document as <dmn:Definitions>/,
+  );
+  assert.equal(warnings.length, 1, `expected one warning, got: ${warnings.join(' | ')}`);
+  assert.match(warnings[0], /unexpected element <definitions>/);
+});
+
 test('evaluateDecision resolves result and trace with hit policy and matched rules', async () => {
   const dmn = await readFile(join(resources, 'discount.dmn'), 'utf8');
   const { definition } = await createDmnRunner(dmn);
@@ -242,6 +270,19 @@ test('import library parses added models and lists them by namespace', async () 
 
   await assert.rejects(library.add('not dmn', 'nope.dmn'));
   assert.equal(library.list().length, 1, 'a rejected add must not leave a model behind');
+});
+
+test('import library keeps the parser warnings of an added model', async () => {
+  const { createImportLibrary } = await import('../src/runner/dmn-runner.js');
+  const library = createImportLibrary();
+  const shipping = await readFile(join(resources, 'shipping.dmn'), 'utf8');
+
+  const clean = await library.add(shipping, 'shipping.dmn');
+  assert.deepEqual(clean.warnings, []);
+
+  const odd = await library.add(shipping.replace('<decision ', '<wizard id="merlin" />\n  <decision '), 'odd.dmn');
+  assert.equal(odd.warnings.length, 1, `expected one warning, got: ${odd.warnings.join(' | ')}`);
+  assert.match(odd.warnings[0], /unparsable content <wizard>[^]*unknown type <dmn:Wizard>/);
 });
 
 test('a decision requiring an imported decision evaluates through the import library', async () => {

@@ -142,7 +142,7 @@ test('re-dropping a DMN with the same file name or decision id replaces the entr
 
   const drop = (name, source) => {
     const ev = new window.Event('drop', { cancelable: true });
-    Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: () => source }] } });
+    Object.defineProperty(ev, 'dataTransfer', { value: { files: [new File([source], name)] } });
     document.querySelector('[data-dmn-dropzone]').dispatchEvent(ev);
   };
   const listItems = () => [...document.querySelectorAll('#dmn-list li')];
@@ -181,7 +181,7 @@ test('dropping a new bpmn diagram mid-run stops the run and resets the Run butto
 
   const dropEv = new window.Event('drop', { cancelable: true });
   Object.defineProperty(dropEv, 'dataTransfer', {
-    value: { files: [{ name: 'other.bpmn', text: () => USER_TASK_SOURCE.replace('Def_ui', 'Def_ui2') }] },
+    value: { files: [new File([USER_TASK_SOURCE.replace('Def_ui', 'Def_ui2')], 'other.bpmn')] },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(dropEv);
 
@@ -541,7 +541,7 @@ test('dropping a new diagram forgets the stopped run', async () => {
 
   const dropEv = new window.Event('drop', { cancelable: true });
   Object.defineProperty(dropEv, 'dataTransfer', {
-    value: { files: [{ name: 'other.bpmn', text: () => TASKS_SOURCE }] },
+    value: { files: [new File([TASKS_SOURCE], 'other.bpmn')] },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(dropEv);
   await waitFor(() => document.querySelector('#source').value.includes('Def_uitasks'));
@@ -589,3 +589,70 @@ test('Run recovers once invalid variables are fixed', async () => {
   await waitFor(() => document.querySelector('#output').textContent);
   assert.match(document.querySelector('#run-state').textContent, /completed/i);
 });
+
+test('running a diagram with content the parser could not make sense of warns in the log and opens it', async () => {
+  document.querySelector('#source').value = TASKS_SOURCE.replace('<endEvent ', '<wizard id="merlin" />\n    <endEvent ');
+  document.querySelector('#variables').value = '';
+  document.querySelector('#log-details').open = false;
+  click(document.querySelector('#run'));
+
+  const warning = await waitFor(() => [...document.querySelectorAll('#log li.warn')].find((li) => /<wizard>/.test(li.textContent)));
+  assert.match(warning.textContent, /unknown type <bpmn:Wizard>/);
+  assert.equal(document.querySelector('#log-details').open, true, 'the log should open to show the warning');
+  await waitFor(() => /completed/i.test(document.querySelector('#run-state').textContent));
+});
+
+const PNG_BYTES = Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52);
+
+test('dropping a binary file on the diagram zone is rejected and leaves a waiting run alone', async () => {
+  document.querySelector('#source').value = USER_TASK_SOURCE;
+  document.querySelector('#variables').value = '';
+  click(document.querySelector('#run'));
+  const waitLine = await waitFor(() => document.querySelector('#log li.wait'));
+  document.querySelector('#log-details').open = false;
+
+  dropFiles('[data-dropzone]', new File([PNG_BYTES], 'photo.png'));
+
+  const rejected = await waitFor(() => logError(/photo\.png/));
+  assert.match(rejected.textContent, /not a UTF-8 text file/);
+  assert.equal(document.querySelector('#log-details').open, true, 'the log should open to show the rejection');
+  assert.equal(document.querySelector('#source').value, USER_TASK_SOURCE, 'the source should be left untouched');
+  assert.equal(document.querySelector('#run').disabled, true, 'the run should still be waiting');
+
+  click(waitLine.querySelector('button'));
+  await waitFor(() => /completed/i.test(document.querySelector('#run-state').textContent));
+});
+
+test('dropping a text file that is not XML on the diagram zone is rejected', async () => {
+  document.querySelector('#source').value = USER_TASK_SOURCE;
+
+  dropFiles('[data-dropzone]', new File(['{ "order": { "total": 250 } }'], 'order.json'));
+
+  const rejected = await waitFor(() => logError(/order\.json/));
+  assert.match(rejected.textContent, /not an XML file/);
+  assert.equal(document.querySelector('#source').value, USER_TASK_SOURCE, 'the source should be left untouched');
+});
+
+test('dropping a binary file on the decisions zone lists it as rejected without adding an entry', async () => {
+  const entries = () => document.querySelectorAll('#dmn-list li:not(.error)').length;
+  const listed = entries();
+
+  dropFiles('[data-dmn-dropzone]', new File([PNG_BYTES], 'photo.png'));
+
+  const rejected = await waitFor(() => document.querySelector('#dmn-list li.error'));
+  assert.match(rejected.textContent, /photo\.png is not a UTF-8 text file/);
+  assert.equal(entries(), listed, 'a rejected file should not become an entry');
+
+  // clean up for following tests
+  rejected.remove();
+});
+
+function dropFiles(zone, ...files) {
+  const ev = new window.Event('drop', { cancelable: true });
+  Object.defineProperty(ev, 'dataTransfer', { value: { files } });
+  document.querySelector(zone).dispatchEvent(ev);
+}
+
+function logError(pattern) {
+  return [...document.querySelectorAll('#log li.error')].find((li) => pattern.test(li.textContent));
+}

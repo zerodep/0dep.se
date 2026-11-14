@@ -1,4 +1,5 @@
 import { evaluateToc } from './toc-lib.js';
+import { readDroppedText } from './dropped-file.js';
 
 const DEFAULT_NAME = 'README.md';
 
@@ -160,7 +161,15 @@ function wireDropzone(zone, onFiles) {
 }
 
 wireDropzone(dropzone, async ([file]) => {
-  sourceEl.value = await file.text();
+  let source;
+  try {
+    source = await readDroppedText(file);
+  } catch (err) {
+    statusEl.hidden = false;
+    statusEl.textContent = err?.message || err;
+    return;
+  }
+  sourceEl.value = source;
   fileName = file.name || DEFAULT_NAME;
   refresh();
 });

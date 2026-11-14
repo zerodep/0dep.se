@@ -1,4 +1,5 @@
 import { createDefinition, runDefinition, stepDefinition, stopDefinition, switchStepMode, listDmnDecisions } from './bpmn-runner.js';
+import { readDroppedText } from './dropped-file.js';
 
 const LOGGED_EVENTS = /^(definition|process|activity)\.(enter|start|wait|end|leave|error)$|^flow\.take$|^activity\.timer$/;
 const DISCARD_EVENTS = new Set(['activity.discard', 'activity.execution.discard']);
@@ -94,7 +95,7 @@ exampleBtn?.addEventListener('click', async () => {
     sourceEl.value = bpmn;
     variablesEl.value = '{ "order": { "total": 250 } }';
     validateVariables();
-    await addDmnFile({ name: 'discount.dmn', text: () => dmn });
+    await addDmn('discount.dmn', dmn);
     showDiagram(bpmn);
   } catch (err) {
     logLine(`failed to load example — ${err?.message || err}`, { className: 'error' });
@@ -108,13 +109,21 @@ sourceEl.addEventListener('paste', () => {
 });
 
 wireDropzone(dropzone, async ([file]) => {
+  let source;
+  try {
+    source = await readDroppedText(file, { xml: true });
+  } catch (err) {
+    logLine(err?.message || err, { className: 'error' });
+    logDetails.open = true;
+    return;
+  }
   abandonRun();
-  sourceEl.value = await file.text();
-  showDiagram(sourceEl.value);
+  sourceEl.value = source;
+  showDiagram(source);
 });
 
 wireDropzone(dmnDropzone, (files) => {
-  for (const file of files) addDmnFile(file);
+  for (const file of files) addDroppedDmn(file);
 });
 
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -146,6 +155,7 @@ async function run() {
       dmn: dmnFiles.map((f) => f.source),
       onWarning(message) {
         logLine(message, { className: 'warn' });
+        logDetails.open = true;
       },
       onDmnLog({ scope, level, message }) {
         logLine(`${scope} ${message}`, { className: level === 'debug' ? 'muted' : level });
@@ -692,22 +702,36 @@ function renderTakenLine(id) {
 
 // --- files ---
 
-async function addDmnFile(file) {
-  const source = await file.text();
+async function addDroppedDmn(file) {
+  let source;
+  try {
+    source = await readDroppedText(file, { xml: true });
+  } catch (err) {
+    listDmnError(err?.message || err);
+    return;
+  }
+  await addDmn(file.name, source);
+}
+
+async function addDmn(name, source) {
   try {
     const decisions = await listDmnDecisions(source);
-    const entry = { name: file.name, source, decisions };
+    const entry = { name, source, decisions };
     const ids = new Set(decisions.map((d) => d.id));
     const existing = dmnFiles.findIndex((f) => f.name === entry.name || f.decisions.some((d) => ids.has(d.id)));
     if (existing >= 0) dmnFiles[existing] = entry;
     else dmnFiles.push(entry);
     renderDmnList();
   } catch (err) {
-    const li = document.createElement('li');
-    li.className = 'error';
-    li.textContent = `${file.name} — not a valid DMN file (${err?.message || err})`;
-    dmnListEl.append(li);
+    listDmnError(`${name} — not a valid DMN file (${err?.message || err})`);
   }
+}
+
+function listDmnError(message) {
+  const li = document.createElement('li');
+  li.className = 'error';
+  li.textContent = message;
+  dmnListEl.append(li);
 }
 
 function renderDmnList() {

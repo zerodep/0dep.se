@@ -1,5 +1,6 @@
 import { createDmnRunner, createImportLibrary, evaluateDecision, listRequiredInputs, pickOutputDecision } from './dmn-runner.js';
 import { makeTakeHelper } from './take-helper.js';
+import { readDroppedText } from './dropped-file.js';
 
 // --- demo services ---
 // FEEL service functions must be synchronous — dmn-elements fails a
@@ -58,6 +59,12 @@ function logLine(text, { className } = {}) {
 
 function onLog({ scope, level, message }) {
   logLine(`${scope} ${message}`, { className: level === 'debug' ? 'muted' : level });
+}
+
+/** Log parser warnings, named after the file they are about when it is not the source. */
+function logWarnings(warnings, fileName) {
+  for (const message of warnings) logLine(fileName ? `${fileName}: ${message}` : message, { className: 'warn' });
+  if (warnings.length) logDetails.open = true;
 }
 
 // --- decision table rendering ---
@@ -308,10 +315,17 @@ async function refreshSource() {
     renderImports();
     return;
   }
+  const warnings = [];
   try {
-    const next = await createDmnRunner(source, { onLog, services: demoServices(), resolveImport: importLibrary.resolveImport });
+    const next = await createDmnRunner(source, {
+      onLog,
+      onWarning: (message) => warnings.push(message),
+      services: demoServices(),
+      resolveImport: importLibrary.resolveImport,
+    });
     if (seq !== refreshSeq) return; // superseded by a newer paste/drop
     runner = next;
+    logWarnings(warnings);
     renderImports();
 
     const previous = decisionSelect.value;
@@ -337,6 +351,7 @@ async function refreshSource() {
     renderTables(null);
     updateRequiredInputs();
     renderImports();
+    logWarnings(warnings);
     logLine(`not a valid DMN file — ${err?.message || err}`, { className: 'error' });
     logDetails.open = true;
   }
@@ -478,7 +493,14 @@ async function onDroppedFiles(files) {
   const dropped = [];
   let firstText;
   for (const file of files) {
-    const text = await file.text();
+    let text;
+    try {
+      text = await readDroppedText(file, { xml: true });
+    } catch (err) {
+      logLine(err?.message || err, { className: 'error' });
+      logDetails.open = true;
+      continue;
+    }
     firstText ??= text;
     try {
       const model = await importLibrary.add(text, file.name);
@@ -489,9 +511,14 @@ async function onDroppedFiles(files) {
       logDetails.open = true;
     }
   }
+  if (firstText === undefined) return;
 
   const importedNamespaces = new Set([...(runner?.imports || []), ...dropped.flatMap((m) => m.imports)].map((i) => i.namespace));
   const main = dropped.find((m) => !importedNamespaces.has(m.namespace));
+  for (const model of dropped) {
+    // the source reports its own warnings when it is parsed
+    if (model !== main) logWarnings(model.warnings, model.label);
+  }
   if (main) sourceEl.value = main.source;
   else if (!dropped.length && firstText !== undefined) sourceEl.value = firstText; // let refreshSource report the parse error
   await refreshSource();

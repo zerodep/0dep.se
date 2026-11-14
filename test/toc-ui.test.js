@@ -30,7 +30,7 @@ function setSource(value) {
 
 function drop(name, source) {
   const ev = new window.Event('drop', { cancelable: true });
-  Object.defineProperty(ev, 'dataTransfer', { value: { files: [{ name, text: () => source }] } });
+  Object.defineProperty(ev, 'dataTransfer', { value: { files: [new File([source], name)] } });
   document.querySelector('[data-dropzone]').dispatchEvent(ev);
 }
 
@@ -131,4 +131,21 @@ test('clearing the source clears the results and hides the download again', asyn
   assert.equal(document.querySelector('#output').value, '');
   assert.ok(document.querySelector('#download').hasAttribute('hidden'));
   assert.equal(document.querySelectorAll('#toc-pairs li').length, 0);
+});
+
+test('dropping a binary file is rejected and keeps the markdown, the output and the download name', async () => {
+  drop('GUIDE.md', '# Guide\n\n<!-- toc -->\n<!-- /toc -->\n\n## Setup\n');
+  await waitFor(() => document.querySelector('#source').value.startsWith('# Guide'));
+  await waitFor(() => document.querySelector('#toc-block').textContent.includes('[Setup](#setup)'));
+  const source = document.querySelector('#source').value;
+  const output = document.querySelector('#output').value;
+
+  drop('logo.png', Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52));
+
+  const status = document.querySelector('#toc-status');
+  await waitFor(() => /logo\.png is not a UTF-8 text file/.test(status.textContent));
+  assert.equal(status.hidden, false, 'the rejection should be visible');
+  assert.equal(document.querySelector('#source').value, source, 'the source should be left untouched');
+  assert.equal(document.querySelector('#output').value, output);
+  assert.equal(document.querySelector('#download').getAttribute('download'), 'GUIDE.md');
 });

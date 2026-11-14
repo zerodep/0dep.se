@@ -273,11 +273,11 @@ test('a well-formed decision table renders no warning', async () => {
   );
 });
 
-/** Dispatch a drop of pseudo-files — `{ name, text() }` is all the app reads. */
+/** Dispatch a drop of `[name, content]` pairs as files. */
 function drop(files) {
   const event = new window.Event('drop', { cancelable: true });
   Object.defineProperty(event, 'dataTransfer', {
-    value: { files: files.map(([name, content]) => ({ name, text: () => content })) },
+    value: { files: files.map(([name, content]) => new File([content], name)) },
   });
   document.querySelector('[data-dropzone]').dispatchEvent(event);
 }
@@ -313,15 +313,21 @@ test('dropping a model and the model it imports at once loads the importing one 
 });
 
 test('dropping the imported model after the importing one keeps the source and resolves the import', async () => {
-  setSource('');
+  await loadSource('');
   drop([['order.dmn', await fixture('order.dmn')]]);
   await waitFor(() => document.querySelector('#decision option[value="orderTotal"]'));
   // the library persists across drops (shipping.dmn may already be in it from an
   // earlier test) — the missing state is covered by the never-dropped namespace test below
   assert.ok(document.querySelector('#imports li[data-namespace="https://example.com/dmn/shipping"]'), 'declared import is listed');
 
+  // the import may already read as loaded, so wait for the drop itself to be handled
+  const stale = document.querySelector('#decision option');
   drop([['shipping.dmn', await fixture('shipping.dmn')]]);
-  await waitFor(() => document.querySelector('#imports li[data-status="loaded"]'));
+  await waitFor(() => {
+    const option = document.querySelector('#decision option');
+    return option && option !== stale;
+  });
+  assert.equal(document.querySelector('#imports li[data-namespace="https://example.com/dmn/shipping"]')?.dataset.status, 'loaded');
   assert.match(document.querySelector('#source').value, /OrderDefinitions/, 'dropping an imported model must not replace the source');
 
   document.querySelector('#input-data').value = '{ "total": 1, "parcel": { "weight": 1 } }';
@@ -348,3 +354,93 @@ test('a source without imports hides the imports list', async () => {
   await waitFor(() => document.querySelector('#decision option[value="discount"]'));
   assert.ok(document.querySelector('#imports').hidden);
 });
+
+test('a source with content the parser could not make sense of warns in the log and still loads', async () => {
+  await loadSource('');
+  document.querySelector('#log-details').open = false;
+
+  setSource(discountSource.replace('<decision ', '<gandalf />\n  <decision '));
+
+  const [warning] = await waitFor(() => {
+    const found = logWarnings(/<gandalf>/);
+    return found.length && found;
+  });
+  assert.match(warning.textContent, /unknown type <dmn:Gandalf>/);
+  assert.equal(document.querySelector('#log-details').open, true, 'the log should open to show the warning');
+  await waitFor(() => document.querySelector('#decision option[value="discount"]'));
+});
+
+test('a source that is not DMN says what was found instead', async () => {
+  await loadSource('');
+
+  setSource('<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_bpmn" />');
+
+  await waitFor(() => logWarnings(/unexpected element <definitions>/).length);
+  assert.ok(logError(/not a valid DMN file/), 'the rejection itself should still be logged');
+});
+
+test('warnings of a dropped import name its file, those of the dropped source are not repeated under its file name', async () => {
+  await loadSource('');
+
+  drop([
+    ['shipping.dmn', (await fixture('shipping.dmn')).replace('<decision ', '<radagast />\n  <decision ')],
+    ['order.dmn', (await fixture('order.dmn')).replace('<decision ', '<saruman />\n  <decision ')],
+  ]);
+  await waitFor(() => document.querySelector('#decision option[value="orderTotal"]'));
+
+  const imported = logWarnings(/<radagast>/);
+  assert.equal(imported.length, 1, 'the import is reported once');
+  assert.match(imported[0].textContent, /^shipping\.dmn: /);
+
+  const own = logWarnings(/<saruman>/);
+  assert.ok(own.length, 'the source should report its own warnings');
+  for (const li of own) assert.doesNotMatch(li.textContent, /order\.dmn/);
+});
+
+const PNG_BYTES = Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52);
+
+test('dropping a binary file is rejected and leaves the source and the result alone', async () => {
+  await loadSource(discountSource);
+  document.querySelector('#input-data').value = '{ "total": 250 }';
+  click(document.querySelector('#evaluate'));
+  await waitFor(() => /0\.1/.test(document.querySelector('#result').textContent));
+  document.querySelector('#log-details').open = false;
+
+  drop([['photo.png', PNG_BYTES]]);
+
+  const rejected = await waitFor(() => logError(/photo\.png/));
+  assert.match(rejected.textContent, /not a UTF-8 text file/);
+  assert.equal(document.querySelector('#log-details').open, true, 'the log should open to show the rejection');
+  assert.equal(document.querySelector('#source').value, discountSource, 'the source should be left untouched');
+  assert.match(document.querySelector('#result').textContent, /0\.1/, 'the result should still be shown');
+});
+
+test('a binary file dropped beside a valid model is reported while the model loads', async () => {
+  await loadSource('');
+
+  drop([
+    ['logo.png', PNG_BYTES],
+    ['discount.dmn', discountSource],
+  ]);
+
+  await waitFor(() => document.querySelector('#decision option[value="discount"]'));
+  assert.equal(document.querySelector('#source').value, discountSource);
+  assert.match(logError(/logo\.png/)?.textContent ?? '', /not a UTF-8 text file/);
+});
+
+/** Replace the source and wait until the page has caught up with it. */
+async function loadSource(source) {
+  setSource('');
+  await waitFor(() => !document.querySelector('#decision option'));
+  if (!source) return;
+  setSource(source);
+  await waitFor(() => document.querySelector('#decision option'));
+}
+
+function logError(pattern) {
+  return [...document.querySelectorAll('#log li.error')].find((li) => pattern.test(li.textContent));
+}
+
+function logWarnings(pattern) {
+  return [...document.querySelectorAll('#log li.warn')].filter((li) => pattern.test(li.textContent));
+}

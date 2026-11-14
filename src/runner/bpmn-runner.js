@@ -1,6 +1,7 @@
 import { BpmnModdle } from 'bpmn-moddle';
 import * as elements from 'bpmn-elements';
 import { parseDmn, listDecisions, forwardingLogger } from './dmn-runner.js';
+import { parseXml } from './moddle-parse.js';
 import { makeTakeHelper } from './take-helper.js';
 import { Context as DmnContext, Definition as DmnDefinition, Environment as DmnEnvironment } from 'dmn-elements';
 import { Serializer, TypeResolver } from 'moddle-context-serializer';
@@ -24,7 +25,9 @@ const BYPASSABLE_TYPES = new Set(['bpmn:UserTask', 'bpmn:ManualTask']);
  * @param {boolean} [options.step] run in step mode — activities pause until stepped with stepDefinition()
  * @param {string[]} [options.dmn] DMN sources whose decisions back business rule tasks (matched by decision id)
  * @param {(entry: {scope: string, level: string, message: string}) => void} [options.onDmnLog] receives DMN evaluation log lines
- * @param {(message: string) => void} [options.onWarning] receives diagram lint warnings (e.g. literal flow conditions)
+ * @param {(message: string) => void} [options.onWarning] receives warnings about the sources: what the parser could not
+ *   make sense of in the diagram or in a DMN source (also when the source is rejected), and diagram lint (e.g. literal
+ *   flow conditions). A warning about a DMN source starts with its position, as in `DMN source 2: …`
  * @param {(name: string, elementApi: object) => void} [options.onServiceCall] called when an unregistered service type is auto-stubbed
  */
 export async function createDefinition(source, options = {}) {
@@ -33,11 +36,11 @@ export async function createDefinition(source, options = {}) {
   const takeTwice = makeTakeHelper(2);
   const userServices = { takeOnce, takeTwice, delay, ...options.services };
   const services = {
-    ...(dmn?.length ? await dmnDecisionServices(dmn, onDmnLog, userServices) : undefined),
+    ...(dmn?.length ? await dmnDecisionServices(dmn, onDmnLog, userServices, onWarning) : undefined),
     ...userServices,
   };
 
-  const moddleContext = await createModdle(String(source)).fromXML(String(source));
+  const moddleContext = await parseXml(createModdle(String(source)), source, onWarning);
   const serialized = Serializer(moddleContext, typeResolver, extendFn);
   const environment = new elements.Environment({
     // merges signal output of plain elements @0dep/bpmn-extensions skips
@@ -191,7 +194,8 @@ export function stopDefinition(definition) {
 
 /**
  * Stop a running definition and recover it in or out of step mode — pass the
- * result to runDefinition with `resume: true` to carry on.
+ * result to runDefinition with `resume: true` to carry on. The warnings about
+ * the sources are not reported again.
  * @param {object} definition the running definition
  * @param {string} source the BPMN source the definition was created from
  * @param {boolean} step step mode for the rest of the run
@@ -199,7 +203,7 @@ export function stopDefinition(definition) {
  */
 export async function switchStepMode(definition, source, step, options = {}) {
   // step is cloned into every process environment, so it can't be flipped in place
-  const next = await createDefinition(source, { ...options, step });
+  const next = await createDefinition(source, { ...options, step, onWarning: undefined });
   if (definition.environment.settings.step) settleExecuted(definition);
   const state = withStepSetting(definition.getState(), Boolean(step));
   definition.stop();
@@ -221,12 +225,14 @@ function createModdle(source) {
 }
 
 /** One service per DMN decision, named by decision id, evaluated with the process variables as input. */
-async function dmnDecisionServices(dmnSources, onDmnLog, services) {
+async function dmnDecisionServices(dmnSources, onDmnLog, services, onWarning) {
   const Logger = onDmnLog && forwardingLogger(onDmnLog);
 
   const decisionServices = {};
-  for (const source of dmnSources) {
-    const rootElement = await parseDmn(source);
+  for (const [index, source] of dmnSources.entries()) {
+    const rootElement = await parseDmn(source, {
+      onWarning: onWarning && ((message) => onWarning(`DMN source ${index + 1}: ${message}`)),
+    });
     const definition = new DmnDefinition(new DmnContext(rootElement, new DmnEnvironment({ Logger, services })));
     for (const { id } of listDecisions(rootElement)) {
       decisionServices[id] = function evaluateDecision(executionMessage, callback) {
