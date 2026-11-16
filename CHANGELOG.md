@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.14.0 - 2026-11-16
+
+- patch [`ocrgenerator`](https://github.com/zerodep/ocrgenerator/blob/master/CHANGELOG.md)
+
 ## v1.14.0 - 2026-11-14
 
 - `/run/`, `/dmn/`, `/toc/`: a dropped file has to be UTF-8 text of at most 5 MB, and on `/run/` and `/dmn/` it has to be XML — a binary file, text in another encoding or an oversized file is rejected with a message naming the file instead of landing in the source as garbage. A rejected drop leaves the source and results as they are, and on `/run/` no longer stops a run in progress

@@ -1,6 +1,6 @@
 {
   "name": "zerodep-web",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
@@ -40,7 +40,7 @@
     "globals": "^17.14.0",
     "happy-dom": "^21.0.1",
     "moddle-context-serializer": "^7.0.0",
-    "ocrgenerator": "^3.0.0",
+    "ocrgenerator": "^3.0.3",
     "prettier": "^3.10.1",
     "texample": "^2.0.0",
     "unnecessary": "^3.1.0",
