@@ -1,6 +1,11 @@
 # Changelog
 
-## v1.14.0 - 2026-11-16
+## v1.14.2 - 2026-11-17
+
+- `/run/`: the mouse wheel over a taken-counter badge pans or zooms the diagram instead of scrolling the page
+- dependencies: bpmn-js 18.33 (diagram-js 15.30)
+
+## v1.14.1 - 2026-11-16
 
 - patch [`ocrgenerator`](https://github.com/zerodep/ocrgenerator/blob/master/CHANGELOG.md)
 
