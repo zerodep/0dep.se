@@ -11,8 +11,6 @@ const distDir = join(repoRoot, 'dist');
 let manifest;
 
 before(async () => {
-  const { build } = await import('../src/build.js');
-  await build();
   manifest = JSON.parse(await readFile(join(repoRoot, 'data', 'projects.json'), 'utf8'));
 });
 

@@ -35,8 +35,6 @@ function setSource(value) {
 }
 
 before(async () => {
-  const { build } = await import('../src/build.js');
-  await build();
   discountSource = await readFile(join(repoRoot, 'test', 'resources', 'discount.dmn'), 'utf8');
   const html = await readFile(join(repoRoot, 'dist', 'dmn', 'index.html'), 'utf8');
   window = new Window({ settings: { disableJavaScriptEvaluation: true } });

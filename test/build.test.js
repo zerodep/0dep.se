@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir, rm, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Window } from 'happy-dom';
@@ -21,10 +21,6 @@ let manifest;
 let profile;
 
 before(async () => {
-  await rm(distDir, { recursive: true, force: true });
-  const { build } = await import('../src/build.js');
-  await build();
-
   homeHtmlRaw = await readFile(join(distDir, 'index.html'), 'utf8');
   homeDoc = parseHtml(homeHtmlRaw);
   const aboutHtmlRaw = await readFile(join(distDir, 'about', 'index.html'), 'utf8');

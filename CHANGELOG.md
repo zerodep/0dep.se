@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.14.3 - 2026-11-21
+
+- dependencies: bpmn-js 18.33.1 (diagram-js 15.30.1)
+
 ## v1.14.2 - 2026-11-17
 
 - `/run/`: the mouse wheel over a taken-counter badge pans or zooms the diagram instead of scrolling the page

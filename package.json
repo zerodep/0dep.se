@@ -1,14 +1,14 @@
 {
   "name": "zerodep-web",
-  "version": "1.14.2",
+  "version": "1.14.3",
   "private": true,
   "type": "module",
   "description": "Landing page for the zerodep org and the bpmn-engine ecosystem (zerodep.se / 0dep.se).",
   "scripts": {
     "build": "node src/build.js",
     "pretest": "npm run toc",
-    "test": "rm -rf coverage/tmp && NODE_V8_COVERAGE=coverage/tmp node --test --test-concurrency=1 --test-reporter spec --test-reporter-destination stdout --test-reporter unnecessary/node-test --test-reporter-destination stdout test/*.test.js",
-    "posttest": "rm -rf coverage/tmp && npm run lint && npm run test:md",
+    "test": "unnecessary node --experimental-default-config-file test/*.test.js",
+    "posttest": "npm run lint && npm run test:md",
     "test:md": "texample",
     "lint": "eslint . --cache && prettier . --check --cache",
     "serve": "node src/serve.js",
@@ -43,7 +43,7 @@
     "ocrgenerator": "^3.0.3",
     "prettier": "^3.10.1",
     "texample": "^2.0.0",
-    "unnecessary": "^3.1.0",
+    "unnecessary": "^3.3.0",
     "zeebe-bpmn-moddle": "^2.0.0"
   },
   "unnecessary": {
@@ -53,7 +53,9 @@
       "coverage"
     ],
     "excludeFiles": [
-      "eslint.config.js"
+      "eslint.config.js",
+      "src/build.js",
+      "test/global-setup.js"
     ]
   }
 }

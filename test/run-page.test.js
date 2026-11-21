@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir, rm, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Window } from 'happy-dom';
@@ -18,10 +18,6 @@ let runDoc;
 let manifest;
 
 before(async () => {
-  await rm(distDir, { recursive: true, force: true });
-  const { build } = await import('../src/build.js');
-  await build();
-
   runDoc = parseHtml(await readFile(join(distDir, 'run', 'index.html'), 'utf8'));
   manifest = JSON.parse(await readFile(join(repoRoot, 'data', 'projects.json'), 'utf8'));
 });

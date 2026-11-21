@@ -1,4 +1,4 @@
-import { test, before } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -11,11 +11,6 @@ const repoRoot = join(here, '..');
 const distDir = join(repoRoot, 'dist');
 const pages = ['run', 'dmn', 'tools', 'toc'];
 const origin = 'https://0dep.se';
-
-before(async () => {
-  const { build } = await import('../src/build.js');
-  await build();
-});
 
 // Runs a generated sw.js in a sandbox with fake caches + fetch, and hands back its event listeners.
 function loadWorker(source, { network, cached = {} } = {}) {

@@ -35,8 +35,6 @@ function drop(name, source) {
 }
 
 before(async () => {
-  const { build } = await import('../src/build.js');
-  await build();
   const html = await readFile(join(repoRoot, 'dist', 'toc', 'index.html'), 'utf8');
   window = new Window({ settings: { disableJavaScriptEvaluation: true } });
   window.document.write(html);
