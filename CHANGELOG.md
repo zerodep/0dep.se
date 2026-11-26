@@ -2,6 +2,7 @@
 
 ## v1.14.3 - 2026-11-21
 
+- `/run/`: a run stopped by the loop guard really stops — the engine used to keep looping until the call stack overflowed, freezing the page for a moment
 - dependencies: bpmn-js 18.33.1 (diagram-js 15.30.1)
 
 ## v1.14.2 - 2026-11-17

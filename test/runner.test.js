@@ -394,6 +394,53 @@ test('stops circular runs when an activity is touched more than 10 times', async
   });
 });
 
+test('a tripped loop guard stops the engine at the limit', async () => {
+  const definition = await createDefinition(CIRCULAR_SOURCE);
+  const entered = countEnters(definition);
+
+  await assert.rejects(runDefinition(definition), /loop/i);
+
+  assert.equal(entered('a'), 11, 'the looping activity should not be entered again once the guard trips');
+  assert.equal(definition.stopped, true, 'the definition should be stopped');
+  assert.equal(definition.isRunning, false);
+});
+
+test('a tripped loop guard stops a loop inside a sub-process', async () => {
+  const definition = await createDefinition(
+    loopingProcess(`
+    <startEvent id="start" />
+    <sequenceFlow id="to-sub" sourceRef="start" targetRef="sub" />
+    <subProcess id="sub">
+      <startEvent id="inner-start" />
+      <sequenceFlow id="to-xa" sourceRef="inner-start" targetRef="xa" />${loopTasks('x')}
+    </subProcess>`),
+  );
+  const entered = countEnters(definition);
+
+  await assert.rejects(runDefinition(definition), /loop/i);
+
+  assert.equal(entered('xa'), 11, 'the looping activity should not be entered again once the guard trips');
+  assert.equal(definition.stopped, true, 'the definition should be stopped');
+});
+
+test('a tripped loop guard keeps a second loop in a parallel branch from starting', async () => {
+  const definition = await createDefinition(
+    loopingProcess(`
+    <startEvent id="start" />
+    <sequenceFlow id="to-fork" sourceRef="start" targetRef="fork" />
+    <parallelGateway id="fork" />
+    <sequenceFlow id="to-xa" sourceRef="fork" targetRef="xa" />
+    <sequenceFlow id="to-ya" sourceRef="fork" targetRef="ya" />${loopTasks('x')}${loopTasks('y')}`),
+  );
+  const entered = countEnters(definition);
+
+  await assert.rejects(runDefinition(definition), /loop/i);
+
+  assert.equal(entered('xa') + entered('ya'), 12, 'one branch trips the guard, the other is stopped as it enters');
+  assert.equal(entered('xb') + entered('yb'), 10, 'the other branch should never get past its first activity');
+  assert.equal(definition.stopped, true, 'the definition should be stopped');
+});
+
 test('step mode advances into sub-processes', async () => {
   const source = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_sub" targetNamespace="http://bpmn.io/schema/bpmn">
@@ -1310,3 +1357,32 @@ test('cron timer start events parse through @0dep/bpmn-extensions TimerEventDefi
   assert.ok(timer.timeout > 0 && timer.timeout <= 24 * 60 * 60 * 1000, `timeout should be the next cron run, got ${timer.timeout}`);
   assert.equal(events.at(-1).event, 'definition.leave');
 });
+
+function loopingProcess(body) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def_runaway" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="runaway" isExecutable="true">${body}
+  </process>
+</definitions>`;
+}
+
+function loopTasks(prefix) {
+  return `
+    <task id="${prefix}a" />
+    <sequenceFlow id="${prefix}-ab" sourceRef="${prefix}a" targetRef="${prefix}b" />
+    <task id="${prefix}b" />
+    <sequenceFlow id="${prefix}-ba" sourceRef="${prefix}b" targetRef="${prefix}a" />`;
+}
+
+function countEnters(definition) {
+  const counts = new Map();
+  definition.broker.subscribeTmp(
+    'event',
+    'activity.enter',
+    (_, { content }) => {
+      counts.set(content.id, (counts.get(content.id) || 0) + 1);
+    },
+    { noAck: true },
+  );
+  return (id) => counts.get(id) || 0;
+}

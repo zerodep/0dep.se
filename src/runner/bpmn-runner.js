@@ -86,6 +86,7 @@ export function runDefinition(definition, options = {}) {
     /** @type {Map<string, {id: string, type: string, name?: string, runs: number, totalMs: number}>} */
     const perActivity = new Map();
     let startedAt;
+    let halting = false;
 
     const settle = (fn, value) => {
       definition.broker.cancel(consumerTag);
@@ -96,6 +97,12 @@ export function runDefinition(definition, options = {}) {
       'event',
       '#',
       (routingKey, message) => {
+        if (halting) {
+          if (routingKey === 'activity.enter') definition.getApi(message)?.stop();
+          else if (routingKey.startsWith('definition.')) definition.broker.cancel(consumerTag);
+          return;
+        }
+
         const { id, type, name, executionId, accepts } = message.content;
         const entry = { event: routingKey, id, type, name };
         if (accepts) entry.accepts = accepts;
@@ -118,10 +125,14 @@ export function runDefinition(definition, options = {}) {
 
         if (routingKey === 'activity.enter') {
           if (!definition.environment.settings.step) {
-            const counters = definition.getApi(message)?.owner?.counters;
+            const activityApi = definition.getApi(message);
+            const counters = activityApi?.owner?.counters;
             if (counters && counters.taken + counters.discarded >= maxTouches) {
-              // settle first, so the stop event cannot resolve the run as stopped
-              settle(reject, new Error(`possible infinite loop — <${id}> touched more than ${maxTouches} times, run stopped`));
+              // The engine only acts on the definition's stop when the looping call stack unwinds, which
+              // a loop never does. Stopping each activity as it enters is what breaks the loop.
+              halting = true;
+              reject(new Error(`possible infinite loop — <${id}> touched more than ${maxTouches} times, run stopped`));
+              activityApi.stop();
               definition.stop();
               return;
             }
